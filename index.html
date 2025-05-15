@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salesforce Agentforce: Interactive Concepts (Enhanced V2)</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Salesforce+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --salesforce-blue: #0070D2;
+    --salesforce-blue-dark: #005FB2;
+    --salesforce-blue-light: #00A1E0;
+    --text-primary: #2c3e50; /* Dark grey for primary text */
+    --text-secondary: #576574; /* Lighter grey for secondary text */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F4F6F9; /* Light grey page background */
+    --accent-color: #FF7F50; /* Coral for accents */
+    --success-color: #2ecc71; /* Green for success */
+    --error-color: #e74c3c; /* Red for errors */
+    --interactive-bg: #E1F5FE; /* Light blue for interactive areas */
+    --border-radius: 8px;
+    --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Softer shadow */
+    --box-shadow-hover: 0 6px 20px rgba(0, 0, 0, 0.12);
+    --font-size-base: 16px; /* Base font size for responsiveness */
+    --slide-padding-desktop: 40px 60px;
+    --slide-padding-mobile: 20px 30px;
+  }
+
+  body {
+    font-family: 'Roboto', 'Salesforce Sans', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    overflow: hidden;
+    font-size: var(--font-size-base); /* Base font size on body */
+  }
+
+  .slide-deck {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .slide {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--slide-padding-desktop);
+    box-sizing: border-box;
+    background-color: var(--bg-primary);
+    transition: transform 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.6s ease-in-out;
+    transform: scale(0.95) translateX(100%);
+    opacity: 0;
+    text-align: center;
+    overflow-y: auto; /* Allow scrolling on individual slides if content overflows */
+  }
+
+  .slide.active {
+    transform: scale(1) translateX(0);
+    opacity: 1;
+    z-index: 1;
+  }
+
+  .slide.prev-slide {
+    transform: scale(0.95) translateX(-100%);
+    opacity: 0;
+  }
+
+  .slide h1 {
+    color: var(--salesforce-blue);
+    font-size: clamp(2em, 5vw, 3em); /* Responsive font size */
+    font-weight: 700;
+    margin-bottom: 25px;
+  }
+
+  .slide h2 {
+    color: var(--salesforce-blue-dark);
+    font-size: clamp(1.6em, 4vw, 2em);
+    margin-bottom: 20px;
+  }
+
+  .slide h3 {
+    color: var(--salesforce-blue);
+    font-size: clamp(1.3em, 3.5vw, 1.6em);
+    margin-bottom: 15px;
+  }
+
+  .slide p, .slide li {
+    font-size: clamp(1em, 2.5vw, 1.15em); /* Responsive font size */
+    line-height: 1.7;
+    max-width: 850px;
+    margin-bottom: 18px;
+    text-align: left;
+    color: var(--text-secondary);
+  }
+  .slide p.center-text {
+      text-align: center;
+  }
+
+  .slide ul {
+      list-style-type: none;
+      padding-left: 20px;
+      max-width: 850px; /* Consistent width with p */
+      width: 90%; /* Ensure it doesn't overflow on smaller viewports */
+  }
+  .slide ul li {
+      position: relative;
+      padding-left: 25px;
+      margin-bottom: 10px;
+  }
+  .slide ul li::before {
+      content: '➔';
+      position: absolute;
+      left: 0;
+      color: var(--salesforce-blue-light);
+      font-size: 1.2em;
+      line-height: 1;
+  }
+
+  .slide .content-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+      width: 100%;
+      max-width: 1000px;
+      margin-top: 25px;
+  }
+
+  .grid-item {
+      background-color: var(--bg-primary);
+      padding: 25px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      text-align: left;
+      border-left: 5px solid var(--salesforce-blue-light);
+  }
+
+  .grid-item:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--box-shadow-hover);
+  }
+
+  .grid-item h4 {
+      margin-top: 0;
+      color: var(--salesforce-blue);
+      font-size: clamp(1.1em, 3vw, 1.3em);
+      margin-bottom: 10px;
+  }
+
+  .grid-item p.detail {
+      font-size: clamp(0.9em, 2.2vw, 1em);
+      display: none;
+      margin-top: 10px;
+      color: var(--text-secondary);
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+  }
+
+  .navigation {
+    position: fixed;
+    bottom: 20px; /* Adjusted for smaller screens */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.95); /* Slightly more opaque */
+    padding: 8px;
+    border-radius: 50px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+
+  .nav-button {
+    background-color: var(--salesforce-blue);
+    color: white;
+    border: none;
+    padding: 10px 20px; /* Adjusted for smaller screens */
+    margin: 0 5px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: clamp(0.9em, 2vw, 1em);
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+
+  .nav-button:hover {
+    background-color: var(--salesforce-blue-dark);
+    transform: translateY(-2px);
+  }
+
+  .nav-button:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+      transform: translateY(0);
+  }
+  #slideIndicator {
+      color: var(--text-primary);
+      font-weight: 500;
+      font-size: clamp(0.9em, 2vw, 1em);
+      margin: 0 8px;
+  }
+
+  .interactive-area {
+    margin-top: 20px;
+    padding: clamp(15px, 3vw, 20px); /* Responsive padding */
+    border: 1px solid #e0e0e0;
+    border-radius: var(--border-radius);
+    background-color: var(--interactive-bg); /* Distinct background */
+    width: 100%;
+    max-width: 750px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .interactive-area label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: 500;
+      color: var(--text-primary);
+      text-align: left;
+  }
+
+  .interactive-area button, .interactive-area select, .interactive-area input[type="text"] {
+    padding: clamp(8px, 2vw, 10px) clamp(12px, 3vw, 18px);
+    margin: 8px 5px;
+    background-color: var(--success-color);
+    color: white;
+    border: 1px solid transparent; /* Added border for consistency */
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: clamp(0.9em, 2.2vw, 1em);
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
+    box-sizing: border-box; /* Ensure padding doesn't expand element size */
+  }
+  .interactive-area button:hover, .interactive-area select:hover, .interactive-area input[type="text"]:hover {
+    transform: translateY(-1px);
+  }
+  .interactive-area button {
+      background-color: var(--salesforce-blue); /* Primary action color */
+  }
+  .interactive-area button:hover {
+      background-color: var(--salesforce-blue-dark);
+  }
+
+  .interactive-area select {
+      background-color: var(--bg-primary); /* White background for select */
+      color: var(--text-primary);
+      border: 1px solid #ccc;
+  }
+  .interactive-area select:hover {
+      border-color: var(--salesforce-blue);
+  }
+  .interactive-area input[type="text"] {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid #ccc;
+      width: calc(100% - 10px); /* Adjust width considering margin */
+  }
+  .interactive-area input[type="text"]:focus {
+      border-color: var(--salesforce-blue);
+      box-shadow: 0 0 0 2px rgba(0,112,210,0.2);
+      outline: none;
+  }
+
+
+  .output-area {
+    margin-top: 15px;
+    padding: clamp(12px, 2.5vw, 15px);
+    background-color: #e9ecef;
+    border-radius: var(--border-radius);
+    color: var(--text-secondary);
+    min-height: 40px;
+    border-left: 4px solid var(--accent-color);
+    text-align: left; /* Ensure output text is left aligned */
+  }
+  .output-area strong {
+      color: var(--text-primary);
+  }
+  .output-area ul {
+      padding-left: 20px; /* Indent lists within output */
+      margin-top: 5px;
+  }
+   .output-area ul li::before {
+      content: '✓'; /* Checkmark for list items in output */
+      color: var(--success-color);
+   }
+
+
+  .d3-visualization {
+      border: 1px solid #ccc;
+      background-color: #fdfdfd;
+      margin-top: 20px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      width: 100%; /* Make it take full width of its container */
+      max-width: 800px; /* But not too wide */
+      height: auto; /* Adjust height based on content or aspect ratio */
+  }
+  .d3-visualization svg {
+      width: 100%;
+      height: 100%;
+  }
+
+  .mockup-image {
+      max-width: 90%; /* Responsive, slightly less than full for padding */
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: var(--border-radius);
+      margin-top: 20px;
+      box-shadow: var(--box-shadow);
+  }
+  .hotspot-container {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+      max-width: 100%;
+  }
+
+  .drag-drop-area {
+    display: flex;
+    flex-direction: column; /* Stack on smaller screens */
+    align-items: center;
+    margin-top: 25px;
+    padding: 15px;
+    width: 100%;
+    max-width: 900px;
+  }
+  #draggable-tasks {
+      display: flex;
+      flex-wrap: wrap; /* Allow tasks to wrap */
+      justify-content: center;
+      margin-bottom: 20px;
+  }
+  #dropzones {
+      display: flex;
+      flex-wrap: wrap; /* Allow dropzones to wrap */
+      justify-content: center;
+  }
+
+  .draggable {
+    padding: 10px 15px;
+    margin: 8px;
+    background-color: var(--salesforce-blue-light);
+    color: white;
+    border-radius: var(--border-radius);
+    cursor: grab;
+    text-align: center;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-size: clamp(0.85em, 2vw, 0.95em);
+  }
+
+  .dropzone {
+    padding: 20px;
+    margin: 8px;
+    border: 2px dashed #a5b1c2;
+    border-radius: var(--border-radius);
+    min-width: 180px; /* Adjusted for wrapping */
+    width: auto; /* Allow natural width based on content */
+    flex-basis: 200px; /* Base width before growing/shrinking */
+    flex-grow: 1;
+    min-height: 70px;
+    text-align: center;
+    background-color: var(--bg-secondary);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  .dropzone strong {
+      color: var(--salesforce-blue-dark);
+      font-size: clamp(1em, 2.5vw, 1.1em);
+  }
+
+  .chat-simulation {
+    width: 100%;
+    max-width: 600px; /* Slightly wider */
+    margin: 25px auto;
+    border: 1px solid #dfe4ea;
+    border-radius: var(--border-radius);
+    padding: clamp(15px, 3vw, 20px);
+    background-color: var(--bg-primary);
+    box-shadow: var(--box-shadow);
+  }
+  .chat-messages {
+    height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+  }
+  .message {
+    padding: 8px 0;
+    clear: both;
+    display: flex;
+    margin-bottom: 8px;
+  }
+  .message.user { justify-content: flex-end; }
+  .message.agent { justify-content: flex-start; }
+
+  .message .text {
+    padding: 10px 15px;
+    border-radius: 18px;
+    display: inline-block;
+    max-width: 80%; /* Slightly more max-width */
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-size: clamp(0.9em, 2.2vw, 1em);
+  }
+  .message.user .text {
+    background-color: var(--salesforce-blue);
+    color: white;
+    border-bottom-right-radius: 5px;
+  }
+  .message.agent .text {
+    background-color: #e4e6eb;
+    color: var(--text-primary);
+    border-bottom-left-radius: 5px;
+  }
+  .chat-input { display: flex; }
+  .chat-input input {
+    flex-grow: 1;
+    padding: clamp(10px, 2.5vw, 12px);
+    border: 1px solid #ccc;
+    border-radius: var(--border-radius);
+    margin-right: 10px;
+    font-size: clamp(0.9em, 2.2vw, 1em);
+  }
+  .chat-input button {
+    padding: clamp(10px, 2.5vw, 12px) clamp(15px, 3vw, 20px);
+    background-color: var(--salesforce-blue);
+  }
+
+  #particle-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0; /* Ensure it's behind slide content */
+    opacity: 0.4; /* Slightly less opaque */
+  }
+  .slide#title-slide-content {
+      z-index: 1; /* Ensure content is above canvas */
+      background-color: rgba(0, 50, 100, 0.5); /* Dark overlay for text contrast */
+      /* background-color: transparent; */
+  }
+   .slide#title-slide-content h1, .slide#title-slide-content p {
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6); /* Stronger shadow for readability */
+   }
+   .slide#title-slide-content img {
+       background: rgba(255,255,255,0.15); /* Slightly more visible background */
+       border-radius: 50%;
+       padding: 10px;
+       box-shadow: 0 0 15px rgba(255,255,255,0.3);
+   }
+
+  /* Media Queries for further responsiveness */
+  @media (max-width: 768px) {
+    .slide {
+      padding: var(--slide-padding-mobile);
+    }
+    .drag-drop-area {
+        flex-direction: column;
+        align-items: center;
+    }
+    #draggable-tasks, #dropzones {
+        flex-direction: column; /* Stack tasks and zones on mobile */
+        align-items: center;
+        width: 100%;
+    }
+    .draggable, .dropzone {
+        width: 80%; /* Make them wider on mobile when stacked */
+        margin-bottom: 10px;
+    }
+    .hotspot-tooltip {
+        width: 180px; /* Smaller tooltips on mobile */
+        font-size: 0.85em;
+    }
+  }
+  @media (max-width: 480px) {
+    .nav-button {
+        padding: 8px 15px;
+        margin: 0 3px;
+    }
+    #slideIndicator {
+        margin: 0 5px;
+    }
+    .slide h1 { font-size: 1.8em; }
+    .slide h2 { font-size: 1.4em; }
+    .slide p, .slide li { font-size: 0.95em; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="slide-deck">
+  <div class="slide active" id="title-slide-content">
+    <canvas id="particle-canvas"></canvas>
+    <h1>Understanding Salesforce Agentforce</h1>
+    <p class="center-text" style="font-size: clamp(1.2em, 3vw, 1.5em); font-weight: 300;">Interactive Concepts and Enhanced Visualizations</p>
+    <p class="center-text" style="margin-top: 20px;">Navigate using the buttons below.</p>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Salesforce.com_logo.svg/1200px-Salesforce.com_logo.svg.png" alt="Salesforce Logo" style="max-width: 150px; margin-top: 30px;">
+  </div>
+
+  <div class="slide">
+    <h1>What is Agentforce?</h1>
+    <p>Salesforce Agentforce is a platform for building and deploying <strong>AI agents</strong>. These agents are designed to understand context, reason through problems, plan actions, and execute tasks autonomously or in collaboration with human counterparts.</p>
+    <p>They go beyond traditional chatbots by being able to take proactive actions and integrate deeply with your business data and processes, all within the trusted Salesforce ecosystem.</p>
+    <div class="interactive-area">
+      <h3>Chatbot vs. AI Agent</h3>
+      <p>Explore the key differences between a standard chatbot and an advanced AI Agent built with Agentforce.</p>
+      <button id="showChatbot">Chatbot Characteristics</button>
+      <button id="showAgent">AI Agent Characteristics</button>
+      <div id="comparisonText" class="output-area">
+        Select a type to see its typical characteristics.
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h1>Core Components of an Agent</h1>
+    <p class="center-text">An Agentforce agent is defined by several key components that enable its functionality. Click on each component to learn more.</p>
+    <div class="content-grid">
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Role</h4>
+        <p class="detail">The agent's purpose and the broader goals it should achieve. For example, "Customer Service Specialist" aiming to resolve issues efficiently, or "Sales Development Rep" focused on qualifying leads.</p>
+      </div>
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Trusted Data</h4>
+        <p class="detail">The information context the agent needs to operate. This includes CRM data (customer history, preferences), knowledge articles, real-time insights from Data Cloud, and relevant external data sources, all grounded in Salesforce.</p>
+      </div>
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Actions</h4>
+        <p class="detail">Predefined tasks the agent can execute. Examples: running a Salesforce Flow for order processing, using a Prompt Template (via Prompt Builder) for generating personalized emails, or calling Apex code for complex calculations.</p>
+      </div>
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Guardrails</h4>
+        <p class="detail">Guidelines and constraints defining operational boundaries. This ensures safe, compliant, and ethical behavior, such as knowing when to escalate a sensitive issue to a human or adhering to data privacy policies via the Einstein Trust Layer.</p>
+      </div>
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Channels</h4>
+        <p class="detail">The interfaces where agents interact. This can be web chat, mobile applications, messaging platforms like Slack or WhatsApp, or directly within Salesforce Lightning Experience for employees.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h1>Trusted Data: The Foundation</h1>
+    <p>Agents need access to relevant, accurate, and up-to-date data to make informed decisions and take precise actions. Agentforce leverages a rich tapestry of data sources, all deeply integrated with the Salesforce platform:</p>
+    <ul>
+        <li><strong>Core CRM Data:</strong> Comprehensive customer profiles (Contacts, Accounts), interaction histories (Cases, Activities), sales opportunities, and custom object data stored securely within Salesforce.</li>
+        <li><strong>Data Cloud:</strong> Unifies customer data from all sources (Salesforce apps, external systems, web, mobile) into a single, real-time profile, providing a holistic view for the agent.</li>
+        <li><strong>Salesforce Knowledge:</strong> A repository of FAQs, troubleshooting guides, product specifications, and policy documents, readily accessible by agents.</li>
+        <li><strong>External Data Sources:</strong> Securely integrated via APIs, MuleSoft, or platform events to bring in context from third-party systems (e.g., ERPs, shipping providers, financial systems).</li>
+    </ul>
+    <div class="interactive-area">
+      <h3>Simulate Data Access for a Query</h3>
+      <p>An agent receives a customer query: <strong>"What's the status of my recent order (ORD-2024-00123) and can I change the shipping address to 123 Main St, Anytown?"</strong></p>
+      <button id="queryDataButton">Agent: Process Complex Query</button>
+      <div id="dataAccessOutput" class="output-area">Data sources accessed by the agent will be shown here...</div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h1>Actions: What Agents Can Do</h1>
+    <p>Actions are the specific capabilities an agent possesses to perform tasks. These are often powered by the robust tools available on the Salesforce platform, allowing for seamless integration with your existing business processes:</p>
+    <ul>
+        <li><strong>Run a Salesforce Flow:</strong> Automate complex, multi-step processes like order fulfillment, case resolution, or lead routing using Salesforce's declarative process automation tool.</li>
+        <li><strong>Use a Prompt Template (via Prompt Builder):</strong> Leverage Large Language Models (LLMs) to generate contextualized, human-like responses, summaries, or creative content, configured within Salesforce.</li>
+        <li><strong>Call Apex Code:</strong> Execute custom server-side logic written in Salesforce's proprietary programming language for highly specific or computationally intensive tasks.</li>
+        <li><strong>Invoke MuleSoft APIs:</strong> Connect to and orchestrate actions across external systems, leveraging Salesforce's integration capabilities.</li>
+    </ul>
+    <p>The following slides will demonstrate some of these actions in more detail.</p>
+  </div>
+
+  <div class="slide">
+    <h1>Action Example: Agentforce with Salesforce Flow</h1>
+    <p>Agents can trigger <strong>Salesforce Flows</strong> to automate guided business processes. This leverages Salesforce's powerful declarative automation capabilities, allowing agents to execute complex logic without custom code for many scenarios.</p>
+    <p><strong>Scenario:</strong> A customer wants to update their communication preferences (e.g., opt-out of marketing emails).</p>
+    <div class="interactive-area">
+      <h3>Customer Preference Update</h3>
+      <label for="flowPreferenceSelect">Select new preference for Marketing Emails:</label>
+      <select id="flowPreferenceSelect">
+        <option value="opt_in">Opt-In to Marketing Emails</option>
+        <option value="opt_out">Opt-Out of Marketing Emails</option>
+      </select>
+      <button id="triggerFlowButton">Agent: Update Preferences via Flow</button>
+      <div id="flowOutput" class="output-area">Flow execution details will appear here...</div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h1>Action Example: Agentforce with Apex</h1>
+    <p>For highly custom logic, complex calculations, or integrations not covered by Flows, agents can call <strong>Apex classes</strong>. This taps into Salesforce's robust programmatic capabilities, allowing developers to extend agent actions infinitely.</p>
+    <p><strong>Scenario:</strong> An agent needs to perform a real-time custom fraud check on a high-value transaction before processing it.</p>
+    <div class="interactive-area">
+      <h3>Custom Fraud Check Simulation</h3>
+      <label for="apexTransactionAmount">Transaction Amount ($):</label>
+      <input type="text" id="apexTransactionAmount" placeholder="e.g., 5000">
+      <label for="apexCustomerHistory">Customer Purchase History:</label>
+      <select id="apexCustomerHistory">
+        <option value="new">New Customer (No History)</option>
+        <option value="low_freq">Infrequent, Low Value</option>
+        <option value="high_freq">Frequent, High Value</option>
+      </select>
+      <button id="triggerApexButton">Agent: Perform Fraud Check via Apex</button>
+      <div id="apexOutput" class="output-area">Apex execution details will appear here...</div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h1>Action Example: Agentforce with Prompt Builder</h1>
+    <p>Agents can use <strong>Prompt Templates</strong> (configured in Salesforce's Prompt Builder) to dynamically generate contextualized and personalized content with LLMs. This is key for tasks like drafting emails, summarizing information, or answering complex questions based on specific data.</p>
+    <p><strong>Scenario:</strong> An agent needs to draft a personalized follow-up email after a positive customer service interaction regarding a specific product.</p>
+    <div class="interactive-area">
+      <h3>Personalized Email Generation</h3>
+      <label for="promptCustomerName">Customer Name:</label>
+      <input type="text" id="promptCustomerName" placeholder="e.g., Sarah">
+      <label for="promptProductName">Product Discussed:</label>
+      <input type="text" id="promptProductName" placeholder="e.g., CloudMaster Pro">
+      <label for="promptEmailTone">Select Email Tone:</label>
+      <select id="promptEmailTone">
+        <option value="friendly">Friendly & Appreciative</option>
+        <option value="formal">Formal & Informative</option>
+        <option value="enthusiastic">Enthusiastic & Helpful</option>
+      </select>
+      <button id="triggerPromptButton">Agent: Draft Email via Prompt Builder</button>
+      <div id="promptOutput" class="output-area">Generated email draft will appear here...</div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h1>Guardrails: Operating Safely & Ethically</h1>
+    <p>Guardrails are essential for ensuring that AI agents operate within predefined boundaries, maintaining trust, compliance, and ethical standards. They govern:</p>
+    <ul>
+        <li><strong>Escalation Paths:</strong> When an agent should seamlessly hand over an interaction to a human agent (e.g., for highly emotional customers, complex complaints, or out-of-scope requests).</li>
+        <li><strong>Topic Restrictions:</strong> Defining what subjects an agent is permitted or forbidden to discuss, preventing inappropriate or off-brand conversations.</li>
+        <li><strong>Data Handling & Privacy:</strong> Adherence to data security protocols, PII masking, and compliance with regulations, often enforced by the Einstein Trust Layer within Salesforce.</li>
+        <li><strong>Tone and Persona:</strong> Ensuring the agent's communication style aligns with the brand's voice.</li>
+    </ul>
+    <div class="interactive-area">
+      <h3>Guardrail Simulation: Sensitive Query</h3>
+      <label for="queryComplexity">Query Type:</label>
+      <select id="queryComplexity">
+        <option value="simple">Simple Info ("What are your return policy details?")</option>
+        <option value="complex_frustrated">Complex & Frustrated ("My new device isn't working, and your previous support was unhelpful! I'm very upset.")</option>
+        <option value="sensitive_pii">Sensitive PII Request ("Can you tell me my full credit card number on file?")</option>
+      </select>
+      <br>
+      <label for="escalationPolicy">Escalation Policy Setting:</label>
+      <select id="escalationPolicy">
+        <option value="low">Balanced (Agent attempts resolution first)</option>
+        <option value="high">Aggressive (Prioritize human for sensitive/complex cases)</option>
+      </select>
+      <button onclick="simulateGuardrail()">Simulate Agent Response</button>
+      <div id="guardrailOutput" class="output-area">Agent's response based on query type and guardrails...</div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h1>The Atlas Reasoning Engine</h1>
+    <p class="center-text">This is the core intelligence of Agentforce, built on the Salesforce platform. It enables agents to understand user requests, retrieve relevant information (Retrieval Augmented Generation - RAG) from trusted Salesforce data and other sources, create multi-step plans, and execute them. Click "Animate Process" to see a conceptual flow.</p>
+    <div id="atlasEngineViz" class="d3-visualization"></div>
+    <button onclick="startAtlasAnimation()" style="margin-top:15px;" class="nav-button">Animate Process</button>
+    <p style="font-size:0.9em; margin-top:10px; text-align:center;"><strong>Conceptual Steps:</strong> 1. Query Evaluation & Refinement → 2. Trusted Data Retrieval (RAG) → 3. Dynamic Plan Building → 4. Plan Refinement & Validation → 5. Autonomous Action Execution & Monitoring</p>
+  </div>
+
+  <div class="slide">
+      <h1>Agent Builder & Customization</h1>
+      <p class="center-text">Salesforce provides intuitive low-code tools like <strong>Agent Builder</strong> (part of Einstein Studio) alongside pro-code capabilities for creating, configuring, testing, and supervising your AI agents. This allows you to tailor agents precisely to your business needs and seamlessly integrate them with existing Salesforce workflows and data. Hover over the numbers on the mockup for details.</p>
+      <div class="hotspot-container">
+          <img src="https://www.salesforce.com/content/dam/web/en_us/www/images/platform/einstein-1-platform/einstein-copilot-studio-agent-builder-action-config.png" alt="Agent Builder Mockup - Action Configuration" class="mockup-image">
+          <div class="hotspot" style="top: 12%; left: 18%;">1
+              <span class="hotspot-tooltip"><strong>Topics & Intents:</strong> Define the conversational areas your agent understands (e.g., 'Order Management', 'Technical Support'). Map user utterances to specific intents within the Salesforce setup.</span>
+          </div>
+          <div class="hotspot" style="top: 50%; left: 75%;">2
+              <span class="hotspot-tooltip"><strong>Action Configuration:</strong> Link intents to specific actions (Salesforce Flows, Apex classes, Prompt Templates). Configure input parameters and expected outputs for each action, leveraging standard Salesforce metadata.</span>
+          </div>
+          <div class="hotspot" style="top: 70%; left: 25%;">3
+              <span class="hotspot-tooltip"><strong>Instructions & Guardrails:</strong> Provide natural language instructions to guide agent behavior, define personality, and set operational boundaries, all managed within the Salesforce trust layer.</span>
+          </div>
+          <div class="hotspot" style="bottom: 8%; right: 10%;">4
+              <span class="hotspot-tooltip"><strong>Testing & Analytics:</strong> Built-in tools to test agent conversations, evaluate response quality, and monitor performance analytics (often via Salesforce Reports & Dashboards) for continuous improvement.</span>
+          </div>
+      </div>
+  </div>
+
+
+  <div class="slide">
+      <h1>Pre-built Agents & Skills</h1>
+      <p class="center-text">Salesforce offers a library of pre-built agents and skills to accelerate deployment for common use cases. These serve as excellent starting points and can be extensively customized using Agent Builder and other Salesforce tools. Drag the tasks to the most appropriate pre-built agent type.</p>
+      <div class="drag-drop-area">
+          <div id="draggable-tasks">
+              <div class="draggable" draggable="true" id="task1">Task: Resolve customer product inquiries and troubleshoot issues 24/7 via chat.</div>
+              <div class="draggable" draggable="true" id="task2">Task: Engage inbound web leads, ask qualifying questions, and schedule demos with sales reps.</div>
+              <div class="draggable" draggable="true" id="task3">Task: Help new sales team members practice objection handling and product pitching for specific deals.</div>
+              <div class="draggable" draggable="true" id="task4">Task: Provide personalized product recommendations and guide shoppers through a purchase on an e-commerce site.</div>
+          </div>
+          <div id="dropzones">
+              <div class="dropzone" id="dz-service"><strong>Service Agent</strong></div>
+              <div class="dropzone" id="dz-sdr"><strong>SDR Agent</strong></div>
+              <div class="dropzone" id="dz-coach"><strong>Sales Coach Agent</strong></div>
+              <div class="dropzone" id="dz-shopper"><strong>Personal Shopper Agent</strong></div>
+          </div>
+      </div>
+      <div id="matchResult" class="output-area" style="margin-top:15px; text-align:center;">Drag tasks to the correct agent type.</div>
+  </div>
+
+  <div class="slide">
+    <h1>Key Benefits of Agentforce</h1>
+    <p class="center-text">Implementing Agentforce can bring transformative advantages to your business operations and customer engagement strategies. Click on each benefit to see details.</p>
+    <div class="content-grid">
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Increased Productivity & Efficiency</h4>
+        <p class="detail">Automates repetitive and time-consuming tasks across departments, allowing human employees to focus on higher-value, strategic work. Agents operate 24/7, ensuring continuous service.</p>
+      </div>
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Significant Cost Savings</h4>
+        <p class="detail">Reduces operational costs by efficiently handling a large volume of interactions and processes, minimizing the need for extensive human intervention for routine tasks.</p>
+      </div>
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Enhanced Customer Satisfaction (CSAT)</h4>
+        <p class="detail">Provides instant, accurate, and personalized responses to customer inquiries. Consistent service across all channels leads to improved customer experiences and loyalty.</p>
+      </div>
+      <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Actionable Data-Driven Insights</h4>
+        <p class="detail">Gathers valuable data from every interaction. This data can be analyzed using Salesforce analytics tools to identify trends, customer pain points, and opportunities for process optimization and service improvement.</p>
+      </div>
+       <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Seamless Scalability</h4>
+        <p class="detail">Easily scale your customer service and sales operations to handle fluctuating demand and business growth without a proportional increase in staffing levels, leveraging the scalability of the Salesforce platform.</p>
+      </div>
+       <div class="grid-item" onclick="toggleDetail(this)">
+        <h4>Improved Employee Experience</h4>
+        <p class="detail">By offloading mundane tasks to AI agents, human employees can engage in more fulfilling and challenging work, leading to higher job satisfaction and reduced burnout. Agents act as helpful assistants.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+      <h1>Use Case Simulation: Customer Service</h1>
+      <p class="center-text">An Agentforce Service Agent assists a customer with a multi-part order inquiry. Try asking about an order, a return, or a product. Notice how it might chain actions or access different data based on your query.</p>
+      <div class="chat-simulation">
+          <div class="chat-messages" id="serviceChatMessages">
+              <div class="message agent"><span class="text">Hello! I'm your Salesforce Virtual Assistant, powered by Agentforce. How can I help you today?</span></div>
+          </div>
+          <div class="chat-input">
+              <input type="text" id="serviceChatInput" placeholder="e.g., 'Track my order ORD-2024-007' or 'Return item'" />
+              <button onclick="sendServiceMessage()">Send</button>
+          </div>
+      </div>
+  </div>
+
+  <div class="slide">
+      <h1>Use Case Simulation: Sales Development (SDR)</h1>
+      <p class="center-text">An Agentforce SDR Agent processes a new lead from a web form submission, leveraging Salesforce CRM data and automation.</p>
+      <div class="interactive-area" style="text-align:left;">
+          <h3>New Lead Received:</h3>
+          <p><strong>Name:</strong> Priya Sharma<br>
+             <strong>Company:</strong> Future Solutions Ltd.<br>
+             <strong>Email:</strong> priya.sharma@example.com<br>
+             <strong>Inquiry:</strong> "Interested in learning more about your enterprise AI solutions and pricing."</p>
+          <hr style="margin: 15px 0;">
+          <p><strong>SDR Agent Initial Analysis & Proposed Actions (Powered by Salesforce):</strong></p>
+          <ul id="sdrSuggestions">
+              <li>Validating lead information and enriching with company data (e.g., via Data.com or AppExchange integrations)... <span class="status"></span></li>
+              <li>Checking Salesforce CRM for existing contact/account history and past activities... <span class="status"></span></li>
+              <li>Assessing inquiry sentiment and key terms to qualify interest using Einstein AI...<span class="status"></span></li>
+          </ul>
+          <button id="sdrProcessButton">Process Lead with SDR Agent</button>
+          <div id="sdrOutput" class="output-area" style="margin-top:10px;">Agent actions and outcomes will appear here...</div>
+      </div>
+  </div>
+
+  <div class="slide">
+      <h1>Humans + AI Agents: Collaborative Synergy</h1>
+      <p class="center-text">Agentforce champions a future where AI agents and human employees work in tandem within the Salesforce environment. Agents excel at handling routine tasks, data retrieval, and initial triaging, while humans provide empathy, complex problem-solving, and manage nuanced situations. This collaboration elevates both efficiency and the quality of interactions.</p>
+      <div class="interactive-area">
+          <h3>Scenario: Complex Technical Support Issue with an Upset Customer</h3>
+          <p id="handoffStatus"><strong>Status:</strong> AI Agent is handling initial contact.</p>
+          <p id="agentHandlingText"><strong>AI Agent:</strong> "I understand you're experiencing a critical issue with system X and you're frustrated. I've logged your issue (Case #C1023 in Salesforce) and I'm checking our Knowledge Base and recent similar cases for known solutions..."</p>
+          <p><em>After a few attempts, the AI agent detects high negative sentiment (via Einstein Sentiment Analysis) and recognizes the issue's complexity exceeds its direct resolution capabilities.</em></p>
+          <button id="escalateButton">Simulate AI-Initiated Escalation to Human</button>
+          <div id="humanAgentInterface" style="display:none; margin-top:15px; padding:15px; border:1px solid var(--salesforce-blue); background-color:#e6f3ff; border-radius: var(--border-radius);">
+              <h4>Human Support Specialist View (Salesforce Service Console)</h4>
+              <p><strong><span style="color:var(--error-color);">HIGH PRIORITY</span> Escalation from AI Agent:</strong> Case #C1023</p>
+              <p><strong>Customer:</strong> Priya Sharma (Future Solutions Ltd.) - High Frustration Detected</p>
+              <p><strong>AI Agent Summary (Appended to Case):</strong> "Customer reports critical failure of system X. Unable to perform [specific function]. Previous attempts to guide through basic troubleshooting (KB Art. #567, #569) were unsuccessful. High negative sentiment detected. Recommending immediate human intervention. Full chat transcript attached to case."</p>
+              <p><em>Human agent now has full context within the Salesforce case record and can take over the live interaction with empathy and expertise.</em></p>
+          </div>
+      </div>
+  </div>
+
+
+  <div class="slide">
+    <h1>Summary: The Power of Agentforce</h1>
+    <p>Salesforce Agentforce empowers businesses to build and deploy sophisticated AI agents that can:</p>
+    <ul>
+        <li>Intelligently understand context, reason through complex tasks, and make informed decisions, all grounded in your Salesforce data.</li>
+        <li>Securely access and utilize trusted data from across the entire Salesforce Customer 360 platform and beyond.</li>
+        <li>Perform a wide array of actions using native Salesforce tools like Flows, Prompt Templates (Prompt Builder), Apex, and external system integrations via MuleSoft.</li>
+        <li>Operate within clearly defined ethical and operational guardrails, ensuring safety, compliance, and brand alignment, managed by the Einstein Trust Layer.</li>
+        <li>Collaborate seamlessly with human employees, augmenting their capabilities and enhancing overall productivity and customer experiences directly within their Salesforce workspace.</li>
+    </ul>
+    <p class="center-text" style="font-size: 1.2em; color: var(--salesforce-blue-dark); margin-top:25px;">Agentforce is not just about automation; it's about creating intelligent, adaptive, and trusted AI partners that drive real business value and transform how you engage with customers and empower your teams on the #1 AI CRM.</p>
+    <p class="center-text" style="margin-top: 20px;">For official documentation, Trailhead modules, and the latest updates, please visit the Salesforce website.</p>
+  </div>
+
+</div>
+
+<div class="navigation">
+  <button class="nav-button" id="prevBtn" onclick="changeSlide(-1)" disabled>Previous</button>
+  <span id="slideIndicator" style="margin: 0 10px;">1 / N</span>
+  <button class="nav-button" id="nextBtn" onclick="changeSlide(1)">Next</button>
+</div>
+
+<script>
+  let currentSlide = 0;
+  const slides = document.querySelectorAll('.slide-deck > .slide');
+  const totalSlides = slides.length;
+  const prevButton = document.getElementById('prevBtn');
+  const nextButton = document.getElementById('nextBtn');
+  const slideIndicator = document.getElementById('slideIndicator');
+
+  function updateSlideIndicator() {
+      slideIndicator.textContent = `${currentSlide + 1} / ${totalSlides}`;
+  }
+
+  function showSlide(index) {
+    slides.forEach((slide, i) => {
+      slide.classList.remove('active', 'prev-slide');
+      if (i < index) {
+          slide.classList.add('prev-slide');
+      } else if (i === index) {
+          slide.classList.add('active');
+      }
+    });
+
+    prevButton.disabled = index === 0;
+    nextButton.disabled = index === totalSlides - 1;
+    updateSlideIndicator();
+
+    // Slide specific initializations
+    if (index === 0 && typeof initializeParticles === 'function') {
+        initializeParticles();
+    }
+    // New slide indices: Flow (5), Apex (6), Prompt (7)
+    // Guardrails (8), Atlas (9), Agent Builder (10), Pre-built (11)
+    if (index === 9 && typeof initializeAtlasEngineViz === 'function') {
+        initializeAtlasEngineViz();
+    }
+    if (index === 11 && typeof initializeDragAndDrop === 'function') {
+        initializeDragAndDrop();
+    }
+  }
+
+  function changeSlide(direction) {
+    const newSlideIndex = currentSlide + direction;
+    if (newSlideIndex >= 0 && newSlideIndex < totalSlides) {
+      currentSlide = newSlideIndex;
+      showSlide(currentSlide);
+    }
+  }
+  updateSlideIndicator();
+
+
+  // Slide 1: Particle Canvas Animation
+  const canvas = document.getElementById('particle-canvas');
+  let ctx;
+  let particlesArray;
+  const particleConfig = {
+      count: 70, // Reduced slightly for performance
+      speed: 0.4,
+      minRadius: 1,
+      maxRadius: 2.5,
+      lineDistance: 130,
+      particleColor: 'rgba(255, 255, 255, 0.6)', // Slightly more transparent
+      lineColor: 'rgba(255, 255, 255, 0.25)'
+  };
+
+  class Particle { /* ... (Particle class remains the same) ... */
+      constructor(x, y, directionX, directionY, size, color) {
+          this.x = x; this.y = y;
+          this.directionX = directionX; this.directionY = directionY;
+          this.size = size; this.color = color;
+      }
+      draw() {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+          ctx.fillStyle = this.color; ctx.fill();
+      }
+      update() {
+          if (this.x > canvas.width || this.x < 0) { this.directionX = -this.directionX; }
+          if (this.y > canvas.height || this.y < 0) { this.directionY = -this.directionY; }
+          this.x += this.directionX * particleConfig.speed;
+          this.y += this.directionY * particleConfig.speed;
+          this.draw();
+      }
+  }
+
+  let animationFrameId;
+  function initializeParticles() {
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      particlesArray = [];
+      for (let i = 0; i < particleConfig.count; i++) {
+          let size = Math.random() * (particleConfig.maxRadius - particleConfig.minRadius) + particleConfig.minRadius;
+          let x = Math.random() * canvas.width;
+          let y = Math.random() * canvas.height;
+          let directionX = (Math.random() * 1) - 0.5; // Adjusted for slower, more varied movement
+          let directionY = (Math.random() * 1) - 0.5;
+          particlesArray.push(new Particle(x, y, directionX, directionY, size, particleConfig.particleColor));
+      }
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animateParticles();
+  }
+
+  function connectParticles() { /* ... (connectParticles remains the same) ... */
+      for (let a = 0; a < particlesArray.length; a++) {
+          for (let b = a + 1; b < particlesArray.length; b++) {
+              let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) +
+                             ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+              if (distance < (particleConfig.lineDistance * particleConfig.lineDistance)) {
+                  ctx.strokeStyle = particleConfig.lineColor;
+                  ctx.lineWidth = Math.max(0.1, 1 - (distance / (particleConfig.lineDistance * particleConfig.lineDistance))); // Thinner lines further away
+                  ctx.beginPath();
+                  ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                  ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                  ctx.stroke();
+              }
+          }
+      }
+  }
+
+  function animateParticles() {
+      if (!ctx || !canvas) return; // Ensure canvas and context are available
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < particlesArray.length; i++) {
+          particlesArray[i].update();
+      }
+      connectParticles();
+      animationFrameId = requestAnimationFrame(animateParticles);
+  }
+
+  window.addEventListener('resize', () => {
+      if (currentSlide === 0 && typeof initializeParticles === 'function') {
+          // Debounce or throttle resize if performance is an issue
+          setTimeout(initializeParticles, 200);
+      }
+      if (currentSlide === 9 && typeof initializeAtlasEngineViz === 'function') { // Adjusted index
+          setTimeout(initializeAtlasEngineViz, 200);
+      }
+  });
+
+
+  // Slide 2: What is Agentforce?
+  const showChatbotBtn = document.getElementById('showChatbot');
+  const showAgentBtn = document.getElementById('showAgent');
+  const comparisonTextOutput = document.getElementById('comparisonText');
+
+  if (showChatbotBtn) {
+    showChatbotBtn.addEventListener('click', () => {
+      comparisonTextOutput.innerHTML = `<strong>Chatbot:</strong><ul><li>Typically follows predefined scripts and decision trees.</li><li>Good for simple Q&A, routing, and basic data capture.</li><li>Less autonomous, relies on explicit programming for conversational paths.</li><li>Limited in handling complex, multi-turn conversations or unexpected user inputs.</li></ul>`;
+    });
+  }
+  if (showAgentBtn) {
+    showAgentBtn.addEventListener('click', () => {
+      comparisonTextOutput.innerHTML = `<strong>AI Agent (Agentforce):</strong><ul><li>Can understand complex requests, reason about solutions, and plan multi-step actions.</li><li>Learns from data and interactions to improve performance over time.</li><li>Can operate autonomously within defined guardrails, proactively taking initiative.</li><li>More dynamic, adaptable, and capable of handling nuanced conversations and tasks across various systems, deeply integrated with Salesforce data and processes.</li></ul>`;
+    });
+  }
+
+  // Slide 3 & 13: Core Components & Benefits - Toggle Detail
+  function toggleDetail(element) {
+    const detailP = element.querySelector('p.detail');
+    if (detailP) {
+        const isVisible = detailP.style.display === 'block';
+        detailP.style.display = isVisible ? 'none' : 'block';
+    }
+  }
+
+
+  // Slide 4: Trusted Data
+  const queryDataButton = document.getElementById('queryDataButton');
+  const dataAccessOutput = document.getElementById('dataAccessOutput');
+  if (queryDataButton) {
+    queryDataButton.addEventListener('click', () => {
+      dataAccessOutput.innerHTML = `Agent processing complex query for Order ORD-2024-00123...<br>
+      1. <strong>Accessing Salesforce CRM (Order Object):</strong> Retrieving order details for ORD-2024-00123... (Status: Shipped, Current Address: 456 Old Rd, Pastville)<br>
+      2. <strong>Querying External Shipping API (via MuleSoft or Apex Callout):</strong> Getting real-time tracking for ORD-2024-00123... (ETA: Tomorrow, Current Location: City Distribution Center, Not yet out for delivery)<br>
+      3. <strong>Checking Salesforce Knowledge Base:</strong> Reviewing 'Address Change Policy for Shipped Orders'... (Policy: Address change possible if not yet out for final delivery. Standard fee $10. Check customer tier for waiver.)<br>
+      4. <strong>Accessing Salesforce Data Cloud:</strong> Checking unified customer profile for 'Priya Sharma' (linked to order)... (Segment: Platinum Tier - eligible for free address change and priority handling).<br>
+      <strong>Result:</strong> Agent can inform customer: "Your order ORD-2024-00123 is shipped and expected tomorrow. Since you're a Platinum Tier member, we can change the shipping address to 123 Main St, Anytown free of charge as it's not yet out for final delivery. Would you like me to proceed?"`;
+    });
+  }
+
+  // Slide 5: (No new JS, just text)
+
+  // NEW Slide 6: Agentforce with Salesforce Flow
+  const triggerFlowButton = document.getElementById('triggerFlowButton');
+  const flowOutput = document.getElementById('flowOutput');
+  const flowPreferenceSelect = document.getElementById('flowPreferenceSelect');
+
+  if (triggerFlowButton) {
+    triggerFlowButton.addEventListener('click', () => {
+      const preference = flowPreferenceSelect.value;
+      const preferenceText = flowPreferenceSelect.options[flowPreferenceSelect.selectedIndex].text;
+      flowOutput.innerHTML = `Agent initiating 'Update Communication Preferences' Salesforce Flow...<br>
+      <strong>Input to Flow:</strong> Customer ID (e.g., 003xx00000ABCD), Preference Type (MarketingEmails), New Value ('${preference}').<br>
+      <strong>Flow Steps (Conceptual):</strong>
+      <ul>
+        <li>Flow Start: Triggered by Agent Action.</li>
+        <li>Get Records: Retrieves Contact record using Customer ID.</li>
+        <li>Decision: Checks if preference needs updating.</li>
+        <li>Update Records: Updates 'MarketingEmailOptIn__c' field on Contact to '${preference === "opt_in"}'.</li>
+        <li>Log Action: Creates a Task record detailing the change.</li>
+        <li>Flow End: Returns success status to Agent.</li>
+      </ul>
+      <strong>Result:</strong> Agent confirms: "Your preference for Marketing Emails has been updated to: <strong>${preferenceText}</strong>. This change is now reflected in your Salesforce Contact record."`;
+    });
+  }
+
+  // NEW Slide 7: Agentforce with Apex
+  const triggerApexButton = document.getElementById('triggerApexButton');
+  const apexOutput = document.getElementById('apexOutput');
+  const apexTransactionAmount = document.getElementById('apexTransactionAmount');
+  const apexCustomerHistory = document.getElementById('apexCustomerHistory');
+
+  if (triggerApexButton) {
+    triggerApexButton.addEventListener('click', () => {
+      const amount = parseFloat(apexTransactionAmount.value) || 0;
+      const history = apexCustomerHistory.value;
+      let riskScore = 0;
+      let reason = "";
+
+      if (amount > 10000) riskScore += 40;
+      else if (amount > 2000) riskScore += 20;
+
+      if (history === "new") riskScore += 30;
+      else if (history === "low_freq") riskScore += 15;
+
+      if (riskScore > 50) reason = "High transaction amount for customer profile.";
+      else if (riskScore > 30) reason = "Moderate risk, requires review.";
+      else reason = "Low risk.";
+
+      apexOutput.innerHTML = `Agent calling 'CustomFraudCheck' Apex class...<br>
+      <strong>Input to Apex:</strong> TransactionAmount (${amount}), CustomerHistory ('${history}'), CustomerID (e.g., 003xx00000ABCD).<br>
+      <strong>Apex Logic (Conceptual):</strong>
+      <ul>
+        <li>Method receives parameters.</li>
+        <li>Queries related Salesforce records (e.g., past transactions, account flags).</li>
+        <li>Applies complex weighting and scoring rules based on amount, history, location (not simulated), device ID (not simulated).</li>
+        <li>Calculates a 'FraudRiskScore' (Simulated: ${riskScore}).</li>
+        <li>Returns score and recommendation to Agent.</li>
+      </ul>
+      <strong>Result:</strong> Agent receives: "Fraud Risk Score: <strong>${riskScore}</strong>. Recommendation: <strong>${riskScore > 50 ? "FLAG for Manual Review. Reason: " + reason : (riskScore > 30 ? "Proceed with Caution. Reason: " + reason : "PROCEED. Reason: " + reason)}</strong>"`;
+    });
+  }
+
+  // NEW Slide 8: Agentforce with Prompt Builder
+  const triggerPromptButton = document.getElementById('triggerPromptButton');
+  const promptOutput = document.getElementById('promptOutput');
+  const promptCustomerName = document.getElementById('promptCustomerName');
+  const promptProductName = document.getElementById('promptProductName');
+  const promptEmailTone = document.getElementById('promptEmailTone');
+
+  if (triggerPromptButton) {
+    triggerPromptButton.addEventListener('click', () => {
+      const customerName = promptCustomerName.value || "Valued Customer";
+      const productName = promptProductName.value || "our product/service";
+      const tone = promptEmailTone.value;
+      let greeting = "Hi " + customerName + ",";
+      let body = "";
+      let closing = "Sincerely,";
+
+      switch(tone) {
+        case "friendly":
+          greeting = `Hey ${customerName}!`;
+          body = `Just wanted to say thanks again for chatting with us about ${productName} today! We really appreciate you taking the time. Hope you found it helpful! Let us know if anything else comes up.`;
+          closing = `Best,`;
+          break;
+        case "formal":
+          greeting = `Dear ${customerName},`;
+          body = `This email serves as a follow-up to our recent conversation regarding ${productName}. We trust the information provided was satisfactory. Please do not hesitate to contact us should you require further assistance.`;
+          closing = `Regards,`;
+          break;
+        case "enthusiastic":
+          greeting = `Hi ${customerName}!`;
+          body = `It was fantastic talking to you about ${productName} earlier! We're so excited about how it can help you. Remember, we're here for any questions you have as you explore its amazing features!`;
+          closing = `All the best,`;
+          break;
+      }
+
+      promptOutput.innerHTML = `Agent using Prompt Template (via Prompt Builder) to draft email...<br>
+      <strong>Inputs to Prompt Template:</strong> CustomerName ('${customerName}'), ProductName ('${productName}'), Tone ('${tone}'), InteractionSummary (e.g., 'Positive interaction, customer interested in X feature').<br>
+      <strong>Prompt Builder Logic (Conceptual):</strong>
+      <ul>
+        <li>Selects appropriate base template based on 'Tone' and 'InteractionType'.</li>
+        <li>Merges Salesforce record data (Customer Name, Product Name from Opportunity/Case).</li>
+        <li>LLM generates personalized content sections based on instructions and provided data (e.g., "If sentiment is positive, express appreciation. If specific feature mentioned, highlight its benefit.").</li>
+        <li>Assembles the final email draft.</li>
+      </ul>
+      <strong>Generated Email Draft:</strong><br>
+      <div style="border:1px solid #ccc; padding:10px; margin-top:5px; background-color:white;">
+        <strong>Subject:</strong> Following up on our conversation about ${productName}<br><br>
+        ${greeting}<br><br>
+        ${body}<br><br>
+        ${closing}<br>
+        The Salesforce Agentforce Team
+      </div>`;
+    });
+  }
+
+
+  // Slide 9: Guardrails
+  const guardrailOutput = document.getElementById('guardrailOutput');
+  function simulateGuardrail() {
+    const queryType = document.getElementById('queryComplexity').value;
+    const policy = document.getElementById('escalationPolicy').value;
+    let response = "Agent assessing situation based on guardrails...<br>";
+
+    switch(queryType) {
+        case "simple":
+            response += "<strong>Agent:</strong> 'Our standard return policy allows returns within 30 days for most items. You can find the full details at [link to policy].' (Handled directly, providing information from Salesforce Knowledge)";
+            break;
+        case "complex_frustrated":
+            if (policy === "low") {
+                response += "<strong>Agent:</strong> 'I'm truly sorry to hear you're experiencing this frustration with your device and our previous support. I want to assure you I'll do my best to help. Could you please provide the device serial number and elaborate on the specific issues you're facing now?' (Attempting to de-escalate and gather info, logging interaction in Salesforce Case)";
+            } else { // high escalation policy
+                response += "<strong>Agent:</strong> 'I understand you're very upset, and this situation requires careful attention. To ensure this is resolved effectively, I'm immediately connecting you to a senior support specialist. All details are logged in Case #C1024 in Salesforce.' (Escalated due to high frustration and complexity, ensuring human agent has context in Salesforce)";
+            }
+            break;
+        case "sensitive_pii":
+             response += "<strong>Agent:</strong> 'For security reasons, I cannot display or confirm full credit card numbers. This is to protect your information as per our data security policies managed by the Einstein Trust Layer. However, I can help you update your payment method on file or confirm the last four digits if needed. How would you like to proceed?' (Adhering to PII protection guardrail)";
+            break;
+    }
+    guardrailOutput.innerHTML = response;
+  }
+
+  // Slide 10: Atlas Reasoning Engine
+  let atlasSvg;
+  const atlasNodes = [ /* ... (atlasNodes remains the same) ... */
+      { id: 1, name: "Query Eval & Refine", x: 150, y: 50, color: "#81ecec" },
+      { id: 2, name: "Data Retrieval (RAG)", x: 450, y: 50, color: "#74b9ff" },
+      { id: 3, name: "Plan Building", x: 650, y: 150, color: "#a29bfe" },
+      { id: 4, name: "Plan Refinement", x: 350, y: 250, color: "#ffeaa7" },
+      { id: 5, name: "Autonomous Execution", x: 100, y: 150, color: "#55efc4" }
+  ];
+  const atlasLinks = [ /* ... (atlasLinks remains the same) ... */
+      { source: 1, target: 2 }, { source: 2, target: 3 },
+      { source: 3, target: 4 }, { source: 4, target: 5 },
+      { source: 5, target: 1, type: "feedback" }
+  ];
+
+  function initializeAtlasEngineViz() { /* ... (initializeAtlasEngineViz remains largely the same, ensure it uses responsive width/height from CSS if possible or recalculates based on container) ... */
+      if (atlasSvg) atlasSvg.remove();
+
+      const vizContainer = document.getElementById('atlasEngineViz');
+      if(!vizContainer) return;
+      const containerWidth = vizContainer.clientWidth; // Get actual width of container
+      const baseWidth = 800; // Original design width
+      const baseHeight = 300; // Original design height
+      const scaleFactor = containerWidth / baseWidth;
+      const width = containerWidth;
+      const height = baseHeight * scaleFactor; // Maintain aspect ratio
+
+
+      vizContainer.innerHTML = ''; // Clear previous content
+
+      atlasSvg = d3.select("#atlasEngineViz")
+          .append("svg")
+          .attr("width", width)
+          .attr("height", height)
+          .attr("viewBox", `0 0 ${baseWidth} ${baseHeight}`); // Use base for viewBox scaling
+
+      atlasSvg.append("defs").append("marker")
+          .attr("id", "arrow")
+          .attr("viewBox", "0 -5 10 10").attr("refX", 18)
+          .attr("refY", 0).attr("markerWidth", 6).attr("markerHeight", 6)
+          .attr("orient", "auto").append("path").attr("d", "M0,-5L10,0L0,5")
+          .style("fill", "var(--salesforce-blue-dark)");
+
+      const nodeGroups = atlasSvg.selectAll(".node-group")
+          .data(atlasNodes, d => d.id)
+          .enter().append("g")
+          .attr("class", "node-group")
+          .attr("transform", d => `translate(${d.x},${d.y})`); // Use original x,y for viewBox
+
+      nodeGroups.append("rect")
+          .attr("width", 180).attr("height", 40)
+          .attr("rx", 8).attr("ry", 8).attr("x", -90).attr("y", -20)
+          .style("fill", d => d.color)
+          .style("stroke", "var(--salesforce-blue-dark)");
+
+      nodeGroups.append("text")
+          .text(d => d.name).attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central").style("font-weight", "bold");
+  }
+
+  function startAtlasAnimation() { /* ... (startAtlasAnimation remains largely the same, ensure path coords are based on original node positions if using viewBox scaling) ... */
+      if (!atlasSvg) initializeAtlasEngineViz();
+      atlasSvg.selectAll(".link").remove();
+
+      const paths = atlasSvg.selectAll(".link")
+          .data(atlasLinks)
+          .enter().append("path")
+          .attr("class", "link")
+          .attr("d", d => {
+              const sourceNode = atlasNodes.find(n => n.id === d.source);
+              const targetNode = atlasNodes.find(n => n.id === d.target);
+              // Path coordinates are based on the original node positions for viewBox
+              if (d.type === "feedback") {
+                  return `M${sourceNode.x},${sourceNode.y} Q${(sourceNode.x + targetNode.x)/2},${sourceNode.y + 80} ${targetNode.x},${targetNode.y}`;
+              }
+              return `M${sourceNode.x},${sourceNode.y} L${targetNode.x},${targetNode.y}`;
+          })
+          .attr("stroke", "var(--salesforce-blue-dark)")
+          .attr("stroke-width", 2.5)
+          .attr("fill", "none")
+          .attr("marker-end", "url(#arrow)");
+
+      paths.each(function(d, i) {
+          const path = d3.select(this);
+          const totalLength = path.node().getTotalLength();
+          path.attr("stroke-dasharray", totalLength + " " + totalLength)
+              .attr("stroke-dashoffset", totalLength)
+              .transition().delay(i * 800).duration(800)
+              .ease(d3.easeLinear).attr("stroke-dashoffset", 0)
+              .on("end", () => {
+                  atlasSvg.selectAll(".node-group rect")
+                      .filter(nodeData => nodeData.id === d.target || nodeData.id === d.source)
+                      .transition().duration(200).style("fill", "#fdcb6e")
+                      .transition().duration(200).style("fill", nodeData => nodeData.color);
+              });
+      });
+  }
+
+
+  // Slide 12: Pre-built Agents Drag and Drop
+  let draggedItem = null;
+  const correctMatches = { /* ... (correctMatches remains the same) ... */
+      task1: "dz-service", task2: "dz-sdr",
+      task3: "dz-coach", task4: "dz-shopper"
+  };
+  let matchesMade = 0;
+  let totalTasks = Object.keys(correctMatches).length;
+
+  function initializeDragAndDrop() { /* ... (initializeDragAndDrop remains largely the same) ... */
+      matchesMade = 0;
+      document.getElementById('matchResult').textContent = `Drag tasks to the correct agent type. ${matchesMade}/${totalTasks} matched.`;
+      const draggables = document.querySelectorAll('.draggable');
+      const dropzones = document.querySelectorAll('.dropzone');
+      const draggableContainer = document.getElementById('draggable-tasks');
+
+      draggables.forEach(draggable => {
+          if (draggable.parentElement !== draggableContainer && draggableContainer.contains(draggable)) {
+             draggableContainer.appendChild(draggable);
+          } else if (!draggableContainer.contains(draggable) && draggable.parentElement.classList.contains('dropzone')) {
+              // If it's in a dropzone, it might have been correctly placed in a previous attempt.
+              // For re-initialization, we need to move it back.
+              draggableContainer.appendChild(draggable);
+          }
+          draggable.style.backgroundColor = 'var(--salesforce-blue-light)';
+          draggable.style.opacity = '1';
+          draggable.setAttribute('draggable', 'true');
+          const originalText = draggable.getAttribute('data-original-text') || draggable.textContent;
+          draggable.setAttribute('data-original-text', originalText);
+          draggable.textContent = originalText;
+      });
+
+      dropzones.forEach(dz => {
+          dz.innerHTML = `<strong>${dz.id.replace('dz-','').charAt(0).toUpperCase() + dz.id.slice(4)} Agent</strong>`;
+      });
+
+
+      draggables.forEach(draggable => {
+          draggable.addEventListener('dragstart', (e) => {
+              draggedItem = e.target;
+              setTimeout(() => { if(e.target) e.target.style.opacity = '0.5'; }, 0);
+          });
+          draggable.addEventListener('dragend', (e) => {
+              setTimeout(() => {
+                  if (draggedItem) draggedItem.style.opacity = '1';
+                  draggedItem = null;
+              }, 0);
+          });
+      });
+
+      dropzones.forEach(dropzone => {
+          dropzone.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              e.target.closest('.dropzone').classList.add('hovered');
+          });
+          dropzone.addEventListener('dragleave', (e) => {
+              e.target.closest('.dropzone').classList.remove('hovered');
+          });
+          dropzone.addEventListener('drop', (e) => {
+              e.preventDefault();
+              const targetDropzone = e.target.closest('.dropzone');
+              targetDropzone.classList.remove('hovered');
+              if (draggedItem) {
+                  const dropzoneId = targetDropzone.id;
+                  if (correctMatches[draggedItem.id] === dropzoneId) {
+                      targetDropzone.appendChild(draggedItem);
+                      draggedItem.style.backgroundColor = 'var(--success-color)';
+                      draggedItem.setAttribute('draggable', 'false');
+                      draggedItem.style.opacity = '1';
+                      matchesMade++;
+                      if (matchesMade === totalTasks) {
+                          document.getElementById('matchResult').textContent = 'All matched correctly! Excellent!';
+                      } else {
+                          document.getElementById('matchResult').textContent = `Correct! ${matchesMade}/${totalTasks} matched.`;
+                      }
+                  } else {
+                      draggedItem.style.backgroundColor = 'var(--error-color)';
+                      document.getElementById('matchResult').textContent = 'Incorrect match. Try that task again.';
+                      setTimeout(() => {
+                          if (draggedItem) draggedItem.style.backgroundColor = 'var(--salesforce-blue-light)';
+                      }, 1000);
+                  }
+              }
+          });
+      });
+  }
+
+
+  // Slide 14: Customer Service Chat Sim
+  const serviceChatMessages = document.getElementById('serviceChatMessages');
+  const serviceChatInput = document.getElementById('serviceChatInput');
+
+  function addServiceMessage(text, sender) { /* ... (addServiceMessage remains the same) ... */
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', sender);
+      const textSpan = document.createElement('span');
+      textSpan.classList.add('text');
+      textSpan.textContent = text;
+      messageDiv.appendChild(textSpan);
+      serviceChatMessages.appendChild(messageDiv);
+      serviceChatMessages.scrollTop = serviceChatMessages.scrollHeight;
+  }
+
+  function sendServiceMessage() { /* ... (sendServiceMessage logic enhanced slightly) ... */
+      const userText = serviceChatInput.value.trim();
+      if (!userText) return;
+      addServiceMessage(userText, 'user');
+      serviceChatInput.value = '';
+
+      setTimeout(() => {
+          let agentResponse = "I'm sorry, I'm still learning about that specific query. Could you please try rephrasing or ask about order tracking (e.g., 'track order ORD-123'), returns, or product information?";
+          const lowerUserText = userText.toLowerCase();
+          const orderMatch = lowerUserText.match(/order\s*([A-Z0-9-]+)/i);
+
+
+          if (orderMatch && orderMatch[1]) {
+              agentResponse = `Agent: Thanks! Checking order ${orderMatch[1].toUpperCase()}... It looks like your order shipped yesterday via Express Shipping and is estimated to arrive by Tuesday. Tracking ID: EXP987654321. (This data would come from Salesforce CRM and integrated shipping APIs).`;
+          } else if (lowerUserText.includes("track my order") || lowerUserText.includes("order status")) {
+              agentResponse = "Agent: To track your order, I'll need your order number. Could you please provide it (e.g., 'track order ORD-123')?";
+          } else if (lowerUserText.includes("return item") || lowerUserText.includes("start a return")) {
+              agentResponse = "Agent: I can help with that. Please provide the order number and the item you wish to return. Our policy allows returns within 30 days for unused items in original packaging. (This would trigger a Salesforce Flow for returns processing).";
+          } else if (lowerUserText.includes("product information") || lowerUserText.includes("tell me about")) {
+              agentResponse = "Agent: Sure, which product are you interested in learning more about? I can provide details on features, specifications, and availability from our Salesforce Knowledge base.";
+          } else if (lowerUserText.includes("thank you") || lowerUserText.includes("thanks")) {
+              agentResponse = "Agent: You're very welcome! Is there anything else I can assist you with today?";
+          }
+          addServiceMessage(agentResponse, 'agent');
+      }, 1200);
+  }
+
+  // Slide 15: SDR Agent Sim
+  const sdrProcessButton = document.getElementById('sdrProcessButton');
+  const sdrOutput = document.getElementById('sdrOutput');
+  const sdrSuggestions = document.getElementById('sdrSuggestions');
+
+  if(sdrProcessButton) { /* ... (SDR sim logic remains largely the same, ensure status updates are clear) ... */
+      sdrProcessButton.addEventListener('click', () => {
+          sdrOutput.innerHTML = "SDR Agent processing lead for Priya Sharma...<br><hr>";
+          const suggestionItems = sdrSuggestions.querySelectorAll('li');
+          let currentStep = 0;
+          sdrProcessButton.textContent = "Processing...";
+          sdrProcessButton.disabled = true;
+
+          function processNextStep() {
+              if (currentStep >= suggestionItems.length) {
+                  sdrOutput.innerHTML += "<hr><strong>Agent Final Actions (executed via Salesforce):</strong><br>" +
+                                         "<ul><li>Drafted personalized outreach email using a Prompt Template, referencing 'enterprise AI solutions' and suggesting a brief discovery call.</li>" +
+                                         "<li>Created a follow-up Task in Salesforce, assigned to sales rep, due in 2 business days if no reply.</li>" +
+                                         "<li>Assigned Lead to Senior Sales Rep, Anita Desai, based on Salesforce assignment rules (territory/segment).</li>" +
+                                         "<li>Logged all actions, analysis, and enriched data in the Salesforce Lead record.</li></ul>";
+                  sdrProcessButton.textContent = "Processing Complete";
+                  // sdrProcessButton.disabled = true; // Keep it disabled or re-enable for another run
+                  return;
+              }
+
+              const item = suggestionItems[currentStep];
+              const statusSpan = item.querySelector('.status') || document.createElement('span');
+              statusSpan.className = 'status';
+              item.appendChild(statusSpan); // Ensure it's appended if it wasn't there
+              statusSpan.textContent = ' Processing...';
+              statusSpan.style.color = 'orange';
+
+              setTimeout(() => {
+                  statusSpan.textContent = ' Done.';
+                  statusSpan.style.color = 'var(--success-color)';
+
+                  if (currentStep === 0) {
+                     sdrOutput.innerHTML += "- Lead data validated. Enriched with company size (5000+ employees) and industry (Technology Services) from integrated data source.<br>";
+                  }
+                  if (currentStep === 1) {
+                     sdrOutput.innerHTML += "- Salesforce CRM Check: No existing contact found for priya.sharma@example.com. New Lead record created.<br>";
+                  }
+                  if (currentStep === 2) {
+                     sdrOutput.innerHTML += "- Einstein AI Analysis: Inquiry sentiment is Positive/Neutral. Key terms: 'enterprise AI solutions', 'pricing'. Lead score increased to 85.<br>";
+                  }
+                  currentStep++;
+                  processNextStep();
+              }, 1200 + Math.random() * 400);
+          }
+          processNextStep();
+      });
+  }
+
+  // Slide 16: Human + AI Handoff
+  const escalateButton = document.getElementById('escalateButton');
+  const handoffStatus = document.getElementById('handoffStatus');
+  const agentHandlingText = document.getElementById('agentHandlingText');
+  const humanAgentInterface = document.getElementById('humanAgentInterface');
+
+  if (escalateButton) { /* ... (Handoff sim logic remains largely the same) ... */
+      escalateButton.addEventListener('click', () => {
+          agentHandlingText.innerHTML = "<strong>AI Agent:</strong> 'I understand this is a complex and urgent matter. To ensure you get the best possible support, I'm escalating your case to a Human Support Specialist immediately. They will have all the context we've discussed, which is already logged in Salesforce Case #C1023.'";
+          setTimeout(() => {
+            handoffStatus.innerHTML = "<strong>Status:</strong> <span style='color:var(--error-color);'>Escalated to Human Specialist</span>";
+            humanAgentInterface.style.display = 'block';
+            escalateButton.disabled = true;
+            escalateButton.textContent = 'Escalation Complete';
+            humanAgentInterface.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }, 1500);
+      });
+  }
+
+
+  // Initialize first slide
+  showSlide(currentSlide);
+
+</script>
+</body>
+</html>
