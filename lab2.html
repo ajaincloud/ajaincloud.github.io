@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 2: Agentforce with Prompt Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none;
+        }
+        .slide {
+            display: none;
+            min-height: 70vh; /* Ensure slides take up significant height */
+        }
+        .slide.active {
+            display: block;
+        }
+        .slide-content {
+            max-height: calc(100vh - 200px); /* Adjust based on header/footer height */
+            overflow-y: auto;
+        }
+        /* Custom scrollbar for webkit browsers */
+        .slide-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .slide-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .slide-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .slide-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Basic styling for D3 diagram */
+        .node rect {
+            stroke: #999;
+            fill: #fff;
+            stroke-width: 1.5px;
+        }
+        .node text {
+            font: 12px sans-serif;
+        }
+        .link {
+            fill: none;
+            stroke: #555;
+            stroke-opacity: 0.4;
+            stroke-width: 1.5px;
+        }
+        .input-field {
+            border-color: #cbd5e1; /* Tailwind gray-300 */
+        }
+        .input-field:focus {
+            border-color: #2563eb; /* Tailwind blue-600 */
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* Tailwind blue-500 with opacity */
+        }
+        /* Custom modal for messages */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 100; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .modal-close:hover,
+        .modal-close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .loader {
+            border: 5px solid #f3f3f3; /* Light grey */
+            border-top: 5px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-white shadow-2xl rounded-lg overflow-hidden">
+        <header class="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
+            <h1 class="text-3xl font-bold text-center">Lab 2: Agentforce with Prompt Builder</h1>
+            <p class="text-center text-blue-200 text-sm">Summarize a Support Case</p>
+        </header>
+
+        <main class="p-6 md:p-8 slide-container">
+            <div id="slide1" class="slide active">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Welcome!</h2>
+                    <p class="mb-2"><strong>Facilitator:</strong> Abhinav</p>
+                    <p class="mb-2"><strong>Time Estimate:</strong> 20–30 mins</p>
+                    <p class="mt-4 text-lg">This interactive lab will guide you through creating a Prompt Template in Salesforce Prompt Builder to auto-generate summaries for support cases.</p>
+                    <img src="https://placehold.co/600x300/E0E7FF/4F46E5?text=Agentforce+Prompt+Builder" alt="Agentforce Prompt Builder" class="mt-6 rounded-lg shadow-md mx-auto" onerror="this.src='https://placehold.co/600x300/CCCCCC/FFFFFF?text=Image+Not+Found'">
+                </div>
+            </div>
+
+            <div id="slide2" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Prerequisites</h2>
+                    <ul class="list-disc list-inside space-y-2 bg-indigo-50 p-4 rounded-md">
+                        <li>Basic familiarity with Salesforce Setup and Lightning Experience</li>
+                        <li>Understanding of Salesforce Objects (specifically 'Case')</li>
+                        <li>Introductory knowledge of Agentforce and Flow Builder</li>
+                        <li>Prompt Fundamentals module completed</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="slide3" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Learning Objectives</h2>
+                    <p class="mb-3">By the end of this lab, you will be able to:</p>
+                    <ul class="list-disc list-inside space-y-2 bg-indigo-50 p-4 rounded-md">
+                        <li>Create and configure a Prompt Template in Salesforce Prompt Builder.</li>
+                        <li>Insert CRM merge fields and Flow outputs into a prompt.</li>
+                        <li>Test and iterate on generative AI outputs for clarity and relevance.</li>
+                        <li>Activate and prepare the prompt for use within an Agentforce agent.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="slide4" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Lab Description</h2>
+                    <p class="mb-3">In this hands-on exercise, you will design a Prompt Template that leverages Case record data to auto-generate concise summaries for support cases.</p>
+                    <p class="mb-3">You’ll explore how Prompt Builder connects to Salesforce data and flows, then refine instructions to produce high-quality AI-generated text.</p>
+                    <p>Finally, you’ll activate the template for integration into an Agentforce agent workflow.</p>
+                </div>
+            </div>
+
+            <div id="slide5" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Tools & Environment</h2>
+                    <ul class="list-disc list-inside space-y-2 bg-indigo-50 p-4 rounded-md">
+                        <li>Salesforce Developer Org with Agentforce & Einstein Generative AI enabled</li>
+                        <li>Salesforce Setup → Prompt Builder</li>
+                        <li>Flow Builder (for advanced variable injection, optional)</li>
+                    </ul>
+                     <img src="https://placehold.co/500x250/E0E7FF/4F46E5?text=Salesforce+Tools" alt="Salesforce Tools" class="mt-6 rounded-lg shadow-md mx-auto" onerror="this.src='https://placehold.co/500x250/CCCCCC/FFFFFF?text=Image+Not+Found'">
+                </div>
+            </div>
+
+            <div id="slide6" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-6">Key Agentforce Concepts</h2>
+                    <div class="space-y-6">
+                        <div class="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                            <h3 class="text-xl font-medium text-blue-700 mb-2">Prompt Template</h3>
+                            <p>Structured instructions plus data inputs guiding the Large Language Model (LLM).</p>
+                            <div class="mt-2 p-3 bg-white border border-blue-300 rounded text-sm">
+                                <span class="font-mono bg-blue-100 p-1 rounded">You are a helpful assistant...</span> + <span class="font-mono bg-green-100 p-1 rounded">${!Case.Subject}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-4 border border-green-200 rounded-lg bg-green-50">
+                            <h3 class="text-xl font-medium text-green-700 mb-2">Merge Fields</h3>
+                            <p>Tokens like <code class="bg-green-200 p-1 rounded-sm text-sm">${!Case.FieldName}</code> that map record values directly into prompts.</p>
+                            <p class="mt-2 text-sm"><strong>Example:</strong></p>
+                            <div class="font-mono bg-white p-3 border border-green-300 rounded text-sm">
+                                Case Subject: <span id="mergeFieldSubjectDisplay" class="font-bold text-green-700">${!Case.Subject}</span><br>
+                                Case Description: <span id="mergeFieldDescDisplay" class="font-bold text-green-700">${!Case.Description}</span>
+                            </div>
+                            <button id="showMergeValuesBtn" class="mt-2 bg-green-500 hover:bg-green-600 text-white text-sm py-1 px-3 rounded-md">Show Sample Values</button>
+                            <div id="d3MergeViz" class="mt-3"></div>
+                        </div>
+
+                        <div class="p-4 border border-purple-200 rounded-lg bg-purple-50">
+                            <h3 class="text-xl font-medium text-purple-700 mb-2">Flow Outputs</h3>
+                            <p>Tokens like <code class="bg-purple-200 p-1 rounded-sm text-sm">${!Flow:Your_Flow_API_Name.Prompt}</code> to inject dynamic logic results from a Salesforce Flow.</p>
+                            <p class="mt-1 text-xs text-purple-600">e.g., a Flow could categorize a case or determine its sentiment, then pass that as text into the prompt.</p>
+                        </div>
+
+                        <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <h3 class="text-xl font-medium text-gray-700 mb-2">Test Workspace</h3>
+                            <p>A built-in tool within Prompt Builder to preview AI responses against sample records before activating the prompt.</p>
+                            <img src="https://placehold.co/400x200/E5E7EB/4B5563?text=Mock+Test+Workspace" alt="Mock Test Workspace" class="mt-2 rounded-md shadow-sm mx-auto" onerror="this.src='https://placehold.co/400x200/CCCCCC/FFFFFF?text=Image+Not+Found'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="slide7" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 1: Launch Prompt Builder</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Salesforce Setup)</p>
+                    <ol class="list-decimal list-inside space-y-2">
+                        <li>In Salesforce Setup, use the Quick Find box to search for "Prompt Builder".</li>
+                        <li>Click on "Prompt Builder" in the results.</li>
+                        <li>Click the <strong class="text-blue-600">New Prompt Template</strong> button.</li>
+                    </ol>
+                    <img src="https://placehold.co/600x250/E0E7FF/4F46E5?text=Setup+>+Prompt+Builder+>+New" alt="Launch Prompt Builder" class="mt-4 rounded-lg shadow-md mx-auto" onerror="this.src='https://placehold.co/600x250/CCCCCC/FFFFFF?text=Image+Not+Found'">
+                </div>
+            </div>
+
+            <div id="slide8" class="slide">
+                 <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 2: Define Template Basics</h2>
+                     <p class="text-sm text-gray-500 mb-4">(New Prompt Template Screen)</p>
+                    <div class="space-y-4 mt-4 bg-gray-50 p-6 rounded-lg shadow">
+                        <div>
+                            <label for="promptNameInput" class="block text-sm font-medium text-gray-700">Prompt Template Name:</label>
+                            <input type="text" id="promptNameInput" value="Case Summary Prompt" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 input-field">
+                            <p class="text-xs text-gray-500 mt-1">Example: Case Summary Prompt</p>
+                        </div>
+                        <div>
+                            <label for="relatedObjectSelect" class="block text-sm font-medium text-gray-700">Related Object:</label>
+                            <select id="relatedObjectSelect" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 input-field">
+                                <option>Account</option>
+                                <option selected>Case</option>
+                                <option>Contact</option>
+                                <option>Opportunity</option>
+                            </select>
+                             <p class="text-xs text-gray-500 mt-1">Select "Case" for this lab.</p>
+                        </div>
+                        <p class="mt-4 text-sm">After filling these, you would click "Next" to open the template editor.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="slide9" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 3: Draft Base Instructions</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Prompt Template Editor)</p>
+                    <p class="mb-2">In the instruction area of the Prompt Template editor, paste the following base instructions. This establishes the AI's role, desired output length, and key focus areas.</p>
+                    <div class="bg-gray-100 p-4 rounded-md border border-gray-300">
+                        <label for="baseInstructionsTextarea" class="block text-sm font-medium text-gray-700 mb-1">Instructions:</label>
+                        <textarea id="baseInstructionsTextarea" rows="4" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 input-field">You are a support agent. Summarize the following Case in ~100 words, highlighting the core issue and any troubleshooting steps taken.</textarea>
+                    </div>
+                    <p class="mt-3 text-sm text-gray-600">This text tells the AI how to behave and what to do.</p>
+                </div>
+            </div>
+
+            <div id="slide10" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 4: Insert Merge Fields</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Prompt Template Editor)</p>
+                    <p class="mb-2">Merge fields pull data directly from the Case record into your prompt.</p>
+                    <ol class="list-decimal list-inside space-y-1 mb-3 text-sm">
+                        <li>Click "Insert Field" (or a similar button in the UI).</li>
+                        <li>Select Case → Subject. This will insert <code class="bg-green-100 p-0.5 rounded">${!Case.Subject}</code>.</li>
+                        <li>Repeat for Case → Description to insert <code class="bg-green-100 p-0.5 rounded">${!Case.Description}</code>.</li>
+                    </ol>
+                    <p class="mb-2">Your prompt instructions should now look like this:</p>
+                    <div class="bg-gray-100 p-4 rounded-md border border-gray-300 font-mono text-sm">
+                        <span id="dynamicPromptContent">You are a support agent. Summarize the following Case in ~100 words, highlighting the core issue and any troubleshooting steps taken.</span>
+                        <br><br>
+                        Case Subject: <span id="subjectMergeFieldPlaceholder" class="text-green-600 font-semibold">${!Case.Subject}</span><br>
+                        Case Description: <span id="descriptionMergeFieldPlaceholder" class="text-green-600 font-semibold">${!Case.Description}</span>
+                    </div>
+                     <div class="mt-4 space-x-2">
+                        <button id="addSubjectFieldBtn" class="bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded-md">Simulate Adding Subject</button>
+                        <button id="addDescriptionFieldBtn" class="bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded-md">Simulate Adding Description</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="slide11" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 5 (Optional): Add Flow Logic</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Prompt Template Editor)</p>
+                    <p class="mb-2">If you have a Salesforce Flow that enriches case details (e.g., performs categorization, determines priority score, or extracts key entities), you can insert its output into the prompt.</p>
+                    <p class="mb-2">This allows for more dynamic and contextually rich information to be fed to the AI before summarization.</p>
+                    <p class="mb-1"><strong>Example Syntax:</strong></p>
+                    <div class="bg-purple-100 p-3 rounded-md border border-purple-300 font-mono text-sm mb-3">
+                        ${!Flow:Categorize_Case.Prompt}
+                    </div>
+                    <p class="text-sm">This token would be replaced by the text output from the 'Prompt' variable of your 'Categorize_Case' Flow.</p>
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg border">
+                        <h4 class="font-semibold text-gray-700">Current Prompt (with optional Flow logic):</h4>
+                        <div id="promptWithFlowPreview" class="mt-2 bg-white p-3 rounded-md border font-mono text-xs">
+                            </div>
+                        <button id="addFlowLogicBtn" class="mt-3 bg-purple-500 hover:bg-purple-600 text-white text-sm py-1 px-3 rounded-md">Simulate Adding Flow Output</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="slide12" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 6: Configure Output Preferences</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Prompt Template Editor - Output Options)</p>
+                    <p class="mb-3">Under "Output Options" (or a similar section), you can specify how you want the AI's response to be formatted:</p>
+                    <div class="space-y-4 bg-gray-50 p-6 rounded-lg shadow">
+                        <div>
+                            <label for="outputFormatSelect" class="block text-sm font-medium text-gray-700">Format:</label>
+                            <select id="outputFormatSelect" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm input-field">
+                                <option selected>Plain Text</option>
+                                <option>JSON</option>
+                                <option>Markdown</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Select "Plain Text" for this lab.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Enable Word Limit:</label>
+                            <input type="checkbox" id="enableWordLimitCheckbox" class="mt-1 rounded text-indigo-600 focus:ring-indigo-500" checked>
+                            <input type="text" id="wordLimitInput" value="90-110" placeholder="e.g., 90-110" class="ml-2 p-2 w-1/3 border border-gray-300 rounded-md shadow-sm input-field">
+                            <p class="text-xs text-gray-500 mt-1">Specify a range like "90-110 words".</p>
+                        </div>
+                        <div>
+                            <label for="toneInput" class="block text-sm font-medium text-gray-700">Specify Tone:</label>
+                            <input type="text" id="toneInput" value="Informative, concise, friendly" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm input-field">
+                            <p class="text-xs text-gray-500 mt-1">Examples: Informative, concise, friendly, professional.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="slide13" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 7: Test the Prompt</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Prompt Template Editor - Test Workspace)</p>
+                    <p class="mb-3">Now, let's simulate testing the prompt. You'd typically click "Test Prompt", select a sample Case record, and then "Send to AI".</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h3 class="text-lg font-semibold text-blue-700 mb-2">Your Constructed Prompt:</h3>
+                            <div id="testPromptDisplay" class="bg-white p-3 rounded-md border font-mono text-xs h-40 overflow-y-auto">
+                                </div>
+                        </div>
+
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <h3 class="text-lg font-semibold text-green-700 mb-2">Sample Case Data (Editable):</h3>
+                            <div class="space-y-2 text-sm">
+                                <div>
+                                    <label for="simCaseSubject" class="block text-xs font-medium text-gray-600">Subject:</label>
+                                    <input type="text" id="simCaseSubject" value="Printer Not Working" class="w-full p-1 border border-gray-300 rounded-md input-field">
+                                </div>
+                                <div>
+                                    <label for="simCaseDescription" class="block text-xs font-medium text-gray-600">Description:</label>
+                                    <textarea id="simCaseDescription" rows="3" class="w-full p-1 border border-gray-300 rounded-md input-field">The office printer Model XYZ is not printing. Error light is blinking. Tried restarting it and checking paper tray.</textarea>
+                                </div>
+                                <div>
+                                    <label for="simCaseStatus" class="block text-xs font-medium text-gray-600">Status (example of another field):</label>
+                                    <input type="text" id="simCaseStatus" value="Open" class="w-full p-1 border border-gray-300 rounded-md input-field">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 text-center">
+                        <button id="generateSummaryBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out">
+                            Generate Summary (Simulate AI Call)
+                        </button>
+                    </div>
+
+                    <div id="aiSummarySection" class="mt-6 hidden">
+                        <h3 class="text-lg font-semibold text-indigo-700 mb-2">AI Generated Summary:</h3>
+                        <div id="loader" class="loader hidden"></div>
+                        <div id="aiSummaryOutput" class="bg-gray-100 p-4 rounded-md border border-gray-300 min-h-[100px] text-sm">
+                            </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="slide14" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 8: Iterate & Refine</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Based on Test Results)</p>
+                    <p class="mb-3">Review the AI-generated summary from the test. Does it meet your needs?</p>
+                    <ul class="list-disc list-inside space-y-2 bg-yellow-50 p-4 rounded-md border border-yellow-200 text-sm">
+                        <li><strong>If the summary is too verbose:</strong> Tighten instructions. For example, add "Use ≤3 sentences for context." or "Be extremely concise."</li>
+                        <li><strong>If key information is missing:</strong> Explicitly ask for it in the instructions or add more merge fields to the prompt (e.g., <code class="bg-green-100 p-0.5 rounded">${!Case.Status}</code>, <code class="bg-green-100 p-0.5 rounded">${!Case.Priority}</code>). You might need to go back to "Step 4: Insert Merge Fields" to add them.</li>
+                        <li><strong>If the tone is off:</strong> Adjust the tone specification in "Output Preferences".</li>
+                    </ul>
+                    <p class="mt-3">Test after each change until the output consistently meets your quality criteria for clarity, relevance, and conciseness.</p>
+                    <div class="mt-4 p-3 bg-indigo-50 rounded-lg">
+                        <p class="font-semibold text-indigo-700">Reflection:</p>
+                        <p class="text-sm">Consider the last generated summary. What's one change you might make to the prompt instructions or merge fields to improve it?</p>
+                        <textarea placeholder="Type your refinement ideas here..." class="mt-2 w-full p-2 border border-indigo-200 rounded-md input-field" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div id="slide15" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-1">Step 9: Save & Activate</h2>
+                    <p class="text-sm text-gray-500 mb-4">(Prompt Template Editor)</p>
+                    <ol class="list-decimal list-inside space-y-2 mb-4">
+                        <li>Once you're satisfied with the prompt and its test outputs, click <strong class="text-blue-600">Save</strong>.</li>
+                        <li>Toggle the <strong class="text-green-600">Active</strong> switch to "On". This makes the prompt template available for use in Agentforce agent actions or other Salesforce automation.</li>
+                        <li>Note the <strong class="text-purple-600">Template API Name</strong> (e.g., <code class="bg-purple-100 p-0.5 rounded">Case_Summary_Prompt</code>). This API name is used when integrating the prompt into Flows or Agent configurations.</li>
+                    </ol>
+                    <img src="https://placehold.co/500x200/E0E7FF/4F46E5?text=Save+and+Activate+Prompt" alt="Save and Activate" class="mt-4 rounded-lg shadow-md mx-auto" onerror="this.src='https://placehold.co/500x200/CCCCCC/FFFFFF?text=Image+Not+Found'">
+                </div>
+            </div>
+
+            <div id="slide16" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Lab Deliverables</h2>
+                     <p class="mb-3">Typically, for this lab, you would need to provide:</p>
+                    <ul class="list-disc list-inside space-y-2 bg-indigo-50 p-4 rounded-md">
+                        <li>A screenshot of the final Prompt Builder test showing the AI-generated summary (similar to what you saw on the "Test the Prompt" slide).</li>
+                        <li>The Prompt Template API Name (e.g., <code class="bg-purple-100 p-0.5 rounded">Case_Summary_Prompt</code>).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="slide17" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Troubleshooting Tips</h2>
+                    <ul class="list-disc list-inside space-y-3">
+                        <li><strong class="text-red-600">No AI response or errors during generation?</strong>
+                            <ul class="list-circle list-inside ml-4 text-sm text-gray-700">
+                                <li>Ensure Einstein Generative AI is enabled in your Salesforce org.</li>
+                                <li>Check your internet connection (for this simulation).</li>
+                                <li>Review the browser console (Ctrl+Shift+J or Cmd+Option+J) for any error messages related to the API call.</li>
+                            </ul>
+                        </li>
+                        <li><strong class="text-red-600">Merge fields appear empty in the prompt or summary?</strong>
+                            <ul class="list-circle list-inside ml-4 text-sm text-gray-700">
+                                <li>Confirm the sample Case record (in a real Salesforce environment) has populated values for those fields.</li>
+                                <li>In this simulation, ensure you've typed values into the "Sample Case Data" fields.</li>
+                                 <li>Double-check the merge field syntax: <code class="bg-green-100 p-0.5 rounded">${!ObjectName.FieldName}</code>.</li>
+                            </ul>
+                        </li>
+                        <li><strong class="text-red-600">Word limit not honored precisely?</strong>
+                            <ul class="list-circle list-inside ml-4 text-sm text-gray-700">
+                                <li>LLMs treat word limits as strong suggestions, not strict rules. Minor deviations are common.</li>
+                                <li>Adjust instructions to be more specific, e.g., "Summarize in exactly 2 sentences." or "Provide a summary of about 100 words, not exceeding 110 words."</li>
+                                <li>Refine the prompt to guide the AI towards more concise language.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="slide18" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Next Steps & Extensions</h2>
+                    <p class="mb-3">Once your Case Summary Prompt is active, you can:</p>
+                    <ul class="list-disc list-inside space-y-2 bg-green-50 p-4 rounded-md">
+                        <li><strong>Integrate into Agentforce:</strong> Create an Agent Topic with an Action that invokes this prompt template to provide agents with instant case summaries.</li>
+                        <li><strong>Flow Automation:</strong> Build a Salesforce Flow that triggers on Case updates (e.g., when a case is closed or escalated) and uses this prompt to generate a summary, then posts it to a Slack channel or updates a field on the Case.</li>
+                        <li><strong>Advanced Tuning with Flow:</strong> Use conditional logic within a Flow to dynamically alter parts of the prompt *before* it's sent to the LLM. For example, if a Case has 'High' priority, the Flow could add an instruction like "Emphasize urgency and impact." to the text that gets passed into the <code class="bg-purple-100 p-0.5 rounded">${!Flow:YourFlow.OutputToPrompt}</code> merge field.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="slide19" class="slide">
+                <div class="slide-content p-4">
+                    <h2 class="text-2xl font-semibold text-green-600 mb-4">🎉 Congratulations! 🎉</h2>
+                    <p class="text-lg mb-3">You’ve successfully walked through the process of building and conceptually validating a generative AI prompt for case summaries!</p>
+                    <p class="mb-3">This empowers your Agentforce agents (and other automations) to deliver insights instantly, improving efficiency and understanding of customer issues.</p>
+                    <p>You now have a foundational understanding of how to leverage Prompt Builder with Salesforce data to create powerful AI-driven solutions.</p>
+                    <img src="https://placehold.co/400x250/DBFDE8/16A34A?text=Lab+Complete!" alt="Lab Complete" class="mt-6 rounded-lg shadow-md mx-auto" onerror="this.src='https://placehold.co/400x250/CCCCCC/FFFFFF?text=Image+Not+Found'">
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="bg-gray-100 p-4 flex items-center justify-between border-t border-gray-300">
+            <button id="prevBtn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+            <div class="text-sm text-gray-600">
+                Slide <span id="currentSlideNum">1</span> of <span id="totalSlidesNum">19</span>
+            </div>
+            <button id="nextBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-150 ease-in-out">Next</button>
+        </footer>
+    </div>
+
+    <div id="messageModal" class="modal">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <p id="modalMessageText"></p>
+      </div>
+    </div>
+
+    <script>
+        // --- State Management for Prompt Builder Simulation ---
+        const promptBuilderState = {
+            name: "Case Summary Prompt",
+            relatedObject: "Case",
+            baseInstructions: "You are a support agent. Summarize the following Case in ~100 words, highlighting the core issue and any troubleshooting steps taken.",
+            mergeFields: {
+                subject: false, // True if ${!Case.Subject} is added
+                description: false, // True if ${!Case.Description} is added
+            },
+            flowLogicAdded: false,
+            flowLogicContent: "${!Flow:Categorize_Case.Prompt}", // Example
+            outputFormat: "Plain Text",
+            wordLimitEnabled: true,
+            wordLimit: "90-110",
+            tone: "Informative, concise, friendly",
+            // Sample case data for simulation
+            sampleCase: {
+                Subject: "Login Issue",
+                Description: "User cannot login after password reset. Getting 'invalid credentials' error. Tried clearing cache.",
+                Status: "New", // Example of another field
+                Priority: "High"
+            }
+        };
+
+        // --- Slide Navigation ---
+        let currentSlide = 1;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const currentSlideNumEl = document.getElementById('currentSlideNum');
+        const totalSlidesNumEl = document.getElementById('totalSlidesNum');
+
+        function updateSlideDisplay() {
+            slides.forEach(slide => slide.classList.remove('active'));
+            document.getElementById('slide' + currentSlide).classList.add('active');
+            currentSlideNumEl.textContent = currentSlide;
+            prevBtn.disabled = currentSlide === 1;
+            nextBtn.disabled = currentSlide === totalSlides;
+            
+            // Specific actions when a slide becomes active
+            if (currentSlide === 10) updateDynamicPromptDisplay(); // Slide 10: Insert Merge Fields
+            if (currentSlide === 11) updatePromptWithFlowPreview(); // Slide 11: Optional Flow Logic
+            if (currentSlide === 13) updateTestPromptDisplay(); // Slide 13: Test the Prompt
+        }
+        
+        prevBtn.addEventListener('click', () => {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlideDisplay();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlideDisplay();
+            }
+        });
+        
+        totalSlidesNumEl.textContent = totalSlides;
+        updateSlideDisplay(); // Initial setup
+
+        // --- Modal Logic ---
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageText = document.getElementById('modalMessageText');
+        function showModal(message) {
+            modalMessageText.textContent = message;
+            messageModal.style.display = "block";
+        }
+        function closeModal() {
+            messageModal.style.display = "none";
+        }
+        // Close modal if user clicks outside of it
+        window.onclick = function(event) {
+            if (event.target == messageModal) {
+                closeModal();
+            }
+        }
+
+        // --- Slide 6: Key Agentforce Concepts - Merge Field Demo ---
+        const showMergeValuesBtn = document.getElementById('showMergeValuesBtn');
+        const mergeFieldSubjectDisplay = document.getElementById('mergeFieldSubjectDisplay');
+        const mergeFieldDescDisplay = document.getElementById('mergeFieldDescDisplay');
+        
+        if (showMergeValuesBtn) {
+            showMergeValuesBtn.addEventListener('click', () => {
+                mergeFieldSubjectDisplay.textContent = promptBuilderState.sampleCase.Subject;
+                mergeFieldDescDisplay.textContent = promptBuilderState.sampleCase.Description;
+                showMergeValuesBtn.textContent = "Values Shown!";
+                showMergeValuesBtn.disabled = true;
+                renderD3MergeViz();
+            });
+        }
+
+        function renderD3MergeViz() {
+            const vizData = {
+                nodes: [
+                    { id: "Case Record", group: 1, label: "Case Record\n(e.g., Login Issue)" },
+                    { id: "Merge Token Subject", group: 2, label: "${!Case.Subject}" },
+                    { id: "Merge Token Desc", group: 2, label: "${!Case.Description}" },
+                    { id: "Populated Prompt", group: 3, label: `Prompt:\n"...Subject: ${promptBuilderState.sampleCase.Subject}\n...Description: ${promptBuilderState.sampleCase.Description.substring(0,20)}..."` }
+                ],
+                links: [
+                    { source: "Case Record", target: "Merge Token Subject", value: 1 },
+                    { source: "Case Record", target: "Merge Token Desc", value: 1 },
+                    { source: "Merge Token Subject", target: "Populated Prompt", value: 1 },
+                    { source: "Merge Token Desc", target: "Populated Prompt", value: 1 }
+                ]
+            };
+
+            const svgContainer = d3.select("#d3MergeViz");
+            svgContainer.selectAll("*").remove(); // Clear previous viz
+
+            const width = svgContainer.node().getBoundingClientRect().width || 300;
+            const height = 120;
+
+            const svg = svgContainer.append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const simulation = d3.forceSimulation(vizData.nodes)
+                .force("link", d3.forceLink(vizData.links).id(d => d.id).distance(80))
+                .force("charge", d3.forceManyBody().strength(-100))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            const link = svg.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(vizData.links)
+                .enter().append("line")
+                .attr("class", "link");
+
+            const node = svg.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(vizData.nodes)
+                .enter().append("g")
+                .attr("class", "node");
+
+            node.append("rect")
+                .attr("width", d => d.label.length * 5 + 20 > 120 ? d.label.length * 5 + 10 : 100) // Basic width logic
+                .attr("height", 30)
+                .attr("rx", 5)
+                .attr("ry", 5)
+                .style("fill", d => d.group === 1 ? "#A5D6A7" : (d.group === 2 ? "#90CAF9" : "#FFCC80"));
+
+
+            node.append("text")
+                .attr("dy", "0.35em")
+                .attr("text-anchor", "middle")
+                .selectAll("tspan")
+                .data(d => d.label.split("\n"))
+                .enter().append("tspan")
+                .attr("x", 0)
+                .attr("dy", (d,i) => i === 0 ? 0 : "1.2em")
+                .text(d => d.length > 20 ? d.substring(0, 17) + "..." : d)
+                .style("font-size", "9px");
+
+
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
+                
+                // Adjust rect width/height based on text after rendering (more complex, simplified here)
+                node.selectAll("rect")
+                    .attr("x", function(d) { return -(this.getBBox().width/2 + (d.label.length > 20 ? -10 : 10)); }) // Center rect
+                    .attr("y", -15);
+            });
+        }
+
+
+        // --- Slide 8: Name & Object ---
+        const promptNameInput = document.getElementById('promptNameInput');
+        const relatedObjectSelect = document.getElementById('relatedObjectSelect');
+        if (promptNameInput) promptNameInput.addEventListener('input', (e) => promptBuilderState.name = e.target.value);
+        if (relatedObjectSelect) relatedObjectSelect.addEventListener('change', (e) => promptBuilderState.relatedObject = e.target.value);
+
+        // --- Slide 9: Draft Base Instructions ---
+        const baseInstructionsTextarea = document.getElementById('baseInstructionsTextarea');
+        if (baseInstructionsTextarea) {
+            baseInstructionsTextarea.value = promptBuilderState.baseInstructions; // Initialize
+            baseInstructionsTextarea.addEventListener('input', (e) => {
+                promptBuilderState.baseInstructions = e.target.value;
+                updateDynamicPromptDisplay(); // Update dependent displays
+                updatePromptWithFlowPreview();
+            });
+        }
+        
+        // --- Slide 10: Insert Merge Fields ---
+        const dynamicPromptContentEl = document.getElementById('dynamicPromptContent');
+        const subjectMergeFieldPlaceholderEl = document.getElementById('subjectMergeFieldPlaceholder');
+        const descriptionMergeFieldPlaceholderEl = document.getElementById('descriptionMergeFieldPlaceholder');
+        const addSubjectFieldBtn = document.getElementById('addSubjectFieldBtn');
+        const addDescriptionFieldBtn = document.getElementById('addDescriptionFieldBtn');
+
+        function updateDynamicPromptDisplay() {
+            if (!dynamicPromptContentEl) return;
+            dynamicPromptContentEl.textContent = promptBuilderState.baseInstructions;
+            subjectMergeFieldPlaceholderEl.textContent = promptBuilderState.mergeFields.subject ? "${!Case.Subject}" : "[Subject Field Not Added]";
+            descriptionMergeFieldPlaceholderEl.textContent = promptBuilderState.mergeFields.description ? "${!Case.Description}" : "[Description Field Not Added]";
+        }
+
+        if (addSubjectFieldBtn) {
+            addSubjectFieldBtn.addEventListener('click', () => {
+                promptBuilderState.mergeFields.subject = true;
+                updateDynamicPromptDisplay();
+                addSubjectFieldBtn.textContent = "Subject Added";
+                addSubjectFieldBtn.disabled = true;
+            });
+        }
+        if (addDescriptionFieldBtn) {
+            addDescriptionFieldBtn.addEventListener('click', () => {
+                promptBuilderState.mergeFields.description = true;
+                updateDynamicPromptDisplay();
+                addDescriptionFieldBtn.textContent = "Description Added";
+                addDescriptionFieldBtn.disabled = true;
+            });
+        }
+
+        // --- Slide 11: (Optional) Add Flow Logic ---
+        const promptWithFlowPreviewEl = document.getElementById('promptWithFlowPreview');
+        const addFlowLogicBtn = document.getElementById('addFlowLogicBtn');
+
+        function buildCurrentPromptText(includeFlowLogic = promptBuilderState.flowLogicAdded) {
+            let text = promptBuilderState.baseInstructions;
+            text += "\n\nCase Subject: " + (promptBuilderState.mergeFields.subject ? "${!Case.Subject}" : "[No Subject Field]");
+            text += "\nCase Description: " + (promptBuilderState.mergeFields.description ? "${!Case.Description}" : "[No Description Field]");
+            if (includeFlowLogic) {
+                text += "\n\nAdditional Context from Flow: " + promptBuilderState.flowLogicContent;
+            }
+            return text;
+        }
+        
+        function updatePromptWithFlowPreview() {
+            if (!promptWithFlowPreviewEl) return;
+            promptWithFlowPreviewEl.textContent = buildCurrentPromptText(promptBuilderState.flowLogicAdded);
+        }
+
+        if (addFlowLogicBtn) {
+            addFlowLogicBtn.addEventListener('click', () => {
+                promptBuilderState.flowLogicAdded = true;
+                updatePromptWithFlowPreview();
+                addFlowLogicBtn.textContent = "Flow Logic Added";
+                addFlowLogicBtn.disabled = true;
+            });
+        }
+        
+        // --- Slide 12: Configure Output Preferences ---
+        const outputFormatSelect = document.getElementById('outputFormatSelect');
+        const enableWordLimitCheckbox = document.getElementById('enableWordLimitCheckbox');
+        const wordLimitInput = document.getElementById('wordLimitInput');
+        const toneInput = document.getElementById('toneInput');
+
+        if (outputFormatSelect) outputFormatSelect.addEventListener('change', e => promptBuilderState.outputFormat = e.target.value);
+        if (enableWordLimitCheckbox) enableWordLimitCheckbox.addEventListener('change', e => {
+            promptBuilderState.wordLimitEnabled = e.target.checked;
+            wordLimitInput.disabled = !e.target.checked;
+        });
+        if (wordLimitInput) wordLimitInput.addEventListener('input', e => promptBuilderState.wordLimit = e.target.value);
+        if (toneInput) toneInput.addEventListener('input', e => promptBuilderState.tone = e.target.value);
+
+
+        // --- Slide 13: Test the Prompt (Simulation) ---
+        const testPromptDisplayEl = document.getElementById('testPromptDisplay');
+        const simCaseSubjectEl = document.getElementById('simCaseSubject');
+        const simCaseDescriptionEl = document.getElementById('simCaseDescription');
+        const simCaseStatusEl = document.getElementById('simCaseStatus'); // Example other field
+        const generateSummaryBtn = document.getElementById('generateSummaryBtn');
+        const aiSummarySectionEl = document.getElementById('aiSummarySection');
+        const loaderEl = document.getElementById('loader');
+        const aiSummaryOutputEl = document.getElementById('aiSummaryOutput');
+
+        function updateTestPromptDisplay() {
+            if (!testPromptDisplayEl) return;
+            // Get base instructions
+            let promptText = promptBuilderState.baseInstructions;
+
+            // Add merge fields if they are selected
+            if (promptBuilderState.mergeFields.subject) {
+                promptText += `\n\nCase Subject: {!Case.Subject}`;
+            }
+            if (promptBuilderState.mergeFields.description) {
+                promptText += `\nCase Description: {!Case.Description}`;
+            }
+            // Example for a potential third field, if you were to extend this
+            // if (promptBuilderState.mergeFields.status) { // Assuming you add 'status' to mergeFields
+            //     promptText += `\nCase Status: {!Case.Status}`;
+            // }
+
+            // Add Flow logic if it's included
+            if (promptBuilderState.flowLogicAdded) {
+                promptText += `\n\nAdditional Context from Flow: ${promptBuilderState.flowLogicContent}`;
+            }
+            
+            // Add output preferences to the instruction (as AI would interpret them)
+            promptText += `\n\n(Output Preferences: Format: ${promptBuilderState.outputFormat}.`;
+            if (promptBuilderState.wordLimitEnabled) {
+                promptText += ` Word Limit: ~${promptBuilderState.wordLimit} words.`;
+            }
+            promptText += ` Tone: ${promptBuilderState.tone}.)`;
+
+            testPromptDisplayEl.textContent = promptText;
+        }
+        
+        // Initialize sample data inputs
+        if (simCaseSubjectEl) simCaseSubjectEl.value = promptBuilderState.sampleCase.Subject;
+        if (simCaseDescriptionEl) simCaseDescriptionEl.value = promptBuilderState.sampleCase.Description;
+        if (simCaseStatusEl) simCaseStatusEl.value = promptBuilderState.sampleCase.Status;
+
+
+        if (generateSummaryBtn) {
+            generateSummaryBtn.addEventListener('click', async () => {
+                aiSummarySectionEl.style.display = 'block';
+                loaderEl.style.display = 'block';
+                aiSummaryOutputEl.textContent = '';
+                generateSummaryBtn.disabled = true;
+
+                // Get current values from sample case inputs
+                const currentCaseSubject = simCaseSubjectEl.value;
+                const currentCaseDescription = simCaseDescriptionEl.value;
+                const currentCaseStatus = simCaseStatusEl.value; // Example
+
+                // Construct the prompt that will be sent to the API
+                // This replaces merge field placeholders with actual sample data
+                let apiPrompt = promptBuilderState.baseInstructions;
+
+                if (promptBuilderState.mergeFields.subject) {
+                    apiPrompt += `\n\nCase Subject: ${currentCaseSubject}`;
+                }
+                if (promptBuilderState.mergeFields.description) {
+                    apiPrompt += `\nCase Description: ${currentCaseDescription}`;
+                }
+                // Example: If you had a status field in your prompt template
+                // if (promptBuilderState.mergeFields.status) { // And you tracked its addition
+                //    apiPrompt += `\nCase Status: ${currentCaseStatus}`;
+                // }
+
+
+                if (promptBuilderState.flowLogicAdded) {
+                    // In a real scenario, flow output is text. Here, we just append the placeholder name
+                    // or a simulated output if you define one.
+                    apiPrompt += `\n\nAdditional Context from Flow: (Simulated Flow Output: Case seems urgent due to keywords used.)`;
+                }
+                
+                // Add explicit instructions for tone and length based on preferences
+                apiPrompt += `\nPlease ensure the summary is ${promptBuilderState.tone}.`;
+                if (promptBuilderState.wordLimitEnabled && promptBuilderState.wordLimit) {
+                    apiPrompt += ` The summary should be approximately ${promptBuilderState.wordLimit} words.`;
+                }
+
+
+                let chatHistory = [{ role: "user", parts: [{ text: apiPrompt }] }];
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Left empty as per instructions
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("API Error:", errorData);
+                        throw new Error(`API request failed with status ${response.status}: ${errorData?.error?.message || response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        aiSummaryOutputEl.textContent = text;
+                    } else {
+                        console.error("Unexpected API response structure:", result);
+                        aiSummaryOutputEl.textContent = "Could not retrieve a valid summary from the AI. The response structure was unexpected.";
+                    }
+                } catch (error) {
+                    console.error('Error generating summary:', error);
+                    aiSummaryOutputEl.textContent = `Error: ${error.message}. Check console for details. Ensure AI features are enabled if this were a real Salesforce org.`;
+                    showModal(`Failed to generate summary: ${error.message}. This is a simulation; in a real org, check Einstein Generative AI setup.`);
+                } finally {
+                    loaderEl.style.display = 'none';
+                    generateSummaryBtn.disabled = false;
+                }
+            });
+        }
+        
+        // Initialize displays
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDynamicPromptDisplay();
+            updatePromptWithFlowPreview();
+            updateTestPromptDisplay(); // Ensure test prompt display is populated on load if slide 13 is first
+        });
+
+    </script>
+</body>
+</html>
