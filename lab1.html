@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentforce Quick Revision & Agent Creation Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+        }
+        .slide {
+            display: none;
+            min-height: 70vh; /* Ensure slide content area is substantial */
+        }
+        .slide.active {
+            display: block;
+        }
+        /* Custom styles for D3 graph */
+        .node circle {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+        .node text {
+            font-size: 10px;
+            fill: #333;
+            text-anchor: middle;
+            pointer-events: none; /* Allow dragging through text */
+        }
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+        }
+        .slide-content {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s forwards;
+        }
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        /* Custom toggle switch */
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4ade80; /* green-400 */
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-ball {
+            transform: translateX(100%);
+        }
+        /* Simple modal style */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 100; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            max-width: 500px;
+            border-radius: 0.5rem;
+        }
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-white shadow-2xl rounded-lg overflow-hidden">
+        <header class="bg-gradient-to-r from-sky-600 to-cyan-500 p-6 text-white">
+            <h1 class="text-3xl font-bold text-center">Agentforce Interactive Guide</h1>
+            <p class="text-center text-sky-100 text-sm">Lab 1: Quick Revision & Agent Creation</p>
+        </header>
+
+        <main id="slideContainer" class="p-6 md:p-8">
+            <div class="slide active">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">1. Objectives & Learning Outcomes</h2>
+                    <ul class="list-disc list-inside space-y-2 text-slate-700">
+                        <li><strong>Recap Key Concepts:</strong> Understand Agentforce components—Prompt Builder, Agent Builder, Topics, and Actions.</li>
+                        <li><strong>Verify Environment Readiness:</strong> Confirm Einstein GPT (Agentforce) features are enabled and accessible in your Developer Org/Playground.</li>
+                        <li><strong>Perform Agentforce Creation:</strong> Walk through creating a basic Agentforce agent with default settings.</li>
+                    </ul>
+                    <p class="mt-6 text-sm text-slate-500">Facilitator: Abhinav</p>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">2. Tools & Prerequisites</h2>
+                    <ul class="list-disc list-inside space-y-2 text-slate-700">
+                        <li>Salesforce Developer Org or Playground with Agentforce (Einstein GPT) enabled.</li>
+                        <li>Salesforce Setup access for Prompt Builder and Agentforce settings.</li>
+                    </ul>
+                    <div class="mt-6 p-4 bg-sky-50 border border-sky-200 rounded-lg">
+                        <h3 class="text-lg font-medium text-sky-600 mb-2">Heads Up!</h3>
+                        <p class="text-sm text-sky-700">Ensure your Salesforce environment is correctly configured before proceeding with hands-on activities. This deck will guide you through the concepts.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">3. Core Agentforce Concepts</h2>
+                    <p class="text-slate-700 mb-4">Agentforce empowers you to build AI-driven agents within Salesforce. Let's explore its key components:</p>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <h3 class="text-xl font-medium text-sky-600">Prompt Builder</h3>
+                            <p class="text-sm text-slate-600">Design AI prompts/templates that drive the agent’s conversational responses.</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <h3 class="text-xl font-medium text-sky-600">Agent Builder (Agentforce)</h3>
+                            <p class="text-sm text-slate-600">Configure autonomous AI agents: define Topics and Actions.</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <h3 class="text-xl font-medium text-sky-600">Topics</h3>
+                            <p class="text-sm text-slate-600">Define what types of user requests the agent can handle (e.g., account inquiries, FAQs).</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <h3 class="text-xl font-medium text-sky-600">Actions</h3>
+                            <p class="text-sm text-slate-600">Automate work: trigger Salesforce Flows, call Apex methods, or use custom prompt templates.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">Prompt Builder: Crafting AI Conversations</h2>
+                    <p class="text-slate-700 mb-4">The Prompt Builder is where you design the templates that guide your AI agent's responses. This simulation uses the Gemini API for dynamic responses.</p>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <label for="promptInput" class="block text-sm font-medium text-slate-700 mb-1">Enter a customer query:</label>
+                        <textarea id="promptInput" rows="3" class="w-full p-2 border border-slate-300 rounded-md focus:ring-sky-500 focus:border-sky-500" placeholder="e.g., What are your support hours? or How can I reset my password?"></textarea>
+                        <div class="mt-3 flex items-center space-x-2">
+                            <button id="generateResponseBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-md transition duration-150">
+                                Get AI Response
+                            </button>
+                            <button id="suggestQueryBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-4 rounded-md transition duration-150">
+                                ✨ Suggest a Query
+                            </button>
+                            <div id="promptLoadingIndicator" class="loader hidden"></div>
+                        </div>
+                        <div id="aiResponseOutput" class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-md min-h-[70px] text-sm text-slate-600">
+                            AI's response will appear here...
+                        </div>
+                    </div>
+                    <p class="mt-4 text-xs text-slate-500"><strong>Note:</strong> This simulation calls the Gemini API. Responses are AI-generated and may vary.</p>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">Agent Builder: Assembling Your AI Agent</h2>
+                    <p class="text-slate-700 mb-4">The Agent Builder is your command center for creating and configuring AI agents. Here, you define what an agent is responsible for (Topics) and what it can do (Actions).</p>
+                    <div id="agentBuilderViz" class="w-full h-96 bg-slate-50 rounded-lg border border-slate-200 shadow-inner overflow-hidden">
+                        </div>
+                    <p class="mt-4 text-xs text-slate-500 text-center">Drag nodes to rearrange. This graph illustrates how an Agent connects to Topics, and Topics link to specific Actions.</p>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">Topics: Defining Agent's Areas of Responsibility</h2>
+                    <p class="text-slate-700 mb-4">Topics tell your agent what kinds of user requests it can understand and handle. Each topic represents a specific domain or subject matter.</p>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="text-lg font-medium text-slate-700 mb-3">Example Topics for a Service Agent:</h3>
+                        <ul id="topicsList" class="space-y-2">
+                            <li data-topic="Account Inquiries" class="p-3 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 cursor-pointer transition">Account Inquiries</li>
+                            <li data-topic="Order Status" class="p-3 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 cursor-pointer transition">Order Status</li>
+                            <li data-topic="Product FAQs" class="p-3 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 cursor-pointer transition">Product FAQs</li>
+                            <li data-topic="Technical Support" class="p-3 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 cursor-pointer transition">Technical Support</li>
+                        </ul>
+                        <div id="selectedTopicInfo" class="mt-4 p-3 bg-slate-100 border border-slate-300 rounded-md min-h-[40px] text-sm text-slate-600">
+                            Click on a topic to see a (simulated) detail.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">Actions: Enabling Agent Capabilities</h2>
+                    <p class="text-slate-700 mb-4">Actions are the tasks your agent can perform. These can be Salesforce Flows, Apex code, or using a prompt template for a conversational response.</p>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="text-lg font-medium text-slate-700 mb-3">Example Actions (linked to Topics):</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="actionTopicSelect" class="block text-sm font-medium text-slate-700">Select a Topic to see related Actions:</label>
+                                <select id="actionTopicSelect" class="mt-1 block w-full p-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                                    <option value="">-- Select Topic --</option>
+                                    <option value="Account Inquiries">Account Inquiries</option>
+                                    <option value="Order Status">Order Status</option>
+                                    <option value="Product FAQs">Product FAQs</option>
+                                </select>
+                            </div>
+                            <div id="actionsForTopic" class="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md min-h-[100px]">
+                                <p class="text-sm text-slate-500">Actions will be listed here.</p>
+                            </div>
+                        </div>
+                        <p class="mt-4 text-xs text-slate-500">In a real setup, you'd configure these actions within the Agent Builder, linking them to specific Apex classes, Flows, or Prompt Templates.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">4. Quick Revision: Environment & Setup Checklist</h2>
+                    <p class="text-slate-700 mb-3">Before creating an agent, ensure your Salesforce environment is ready.</p>
+                    
+                    <div class="space-y-4">
+                        <div class="p-4 border border-slate-300 rounded-lg bg-slate-50">
+                            <h3 class="font-medium text-slate-700">A. Verify Einstein GPT Is Enabled</h3>
+                            <p class="text-sm text-slate-600 mt-1">In Setup, search for "Prompt Builder" or "Einstein GPT". If visible, open Prompt Builder to confirm access. If not, enable Einstein GPT features.</p>
+                            <div class="mt-3 p-3 bg-white rounded shadow-sm border border-slate-200">
+                                <p class="text-sm font-mono text-slate-500">Salesforce Setup > Quick Find: <input type="text" value="Prompt Builder" class="ml-2 p-1 border rounded text-xs" readonly></p>
+                                <img src="https://placehold.co/600x100/e2e8f0/94a3b8?text=Mock+Salesforce+Setup+Screen" alt="Mock Salesforce Setup" class="mt-2 rounded border" onerror="this.src='https://placehold.co/600x100/e2e8f0/94a3b8?text=Image+Error'; this.alt='Placeholder showing Image Error'">
+                            </div>
+                        </div>
+
+                        <div class="p-4 border border-slate-300 rounded-lg bg-slate-50">
+                            <h3 class="font-medium text-slate-700">B. Open Agentforce (Copilot) Builder</h3>
+                            <p class="text-sm text-slate-600 mt-1">In Setup, search for "Agentforce" or "Einstein Copilot" → Agents. Ensure you can see options to Create New Agent.</p>
+                             <div class="mt-3 p-3 bg-white rounded shadow-sm border border-slate-200">
+                                <p class="text-sm font-mono text-slate-500">Salesforce Setup > Quick Find: <input type="text" value="Agentforce" class="ml-2 p-1 border rounded text-xs" readonly></p>
+                                <img src="https://placehold.co/600x150/e2e8f0/94a3b8?text=Mock+Agentforce+Builder+UI" alt="Mock Agentforce Builder" class="mt-2 rounded border" onerror="this.src='https://placehold.co/600x150/e2e8f0/94a3b8?text=Image+Error'; this.alt='Placeholder showing Image Error'">
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500"><strong>Proof of Completion:</strong> In a real lab, you'd capture a screenshot of either Prompt Builder or the Agentforce Agents setup page.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">5. Step-by-Step: Creating Your First Agent (Part 1)</h2>
+                    <p class="text-slate-700 mb-3">Let's simulate enabling the required settings.</p>
+                    
+                    <div class="space-y-6 bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <div>
+                            <h3 class="text-lg font-medium text-slate-700">Enable Required Toggles</h3>
+                            <p class="text-sm text-slate-600 mb-3">Path: Setup → Einstein Setup & Setup → Agentforce Agents</p>
+                            <div class="space-y-3">
+                                <label class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200 hover:bg-slate-100">
+                                    <span class="text-sm text-slate-700">Einstein On (in Einstein Setup)</span>
+                                    <div class="relative">
+                                        <input type="checkbox" id="toggleEinstein" class="toggle-checkbox absolute opacity-0 w-0 h-0"/>
+                                        <div class="toggle-label block w-10 h-6 bg-slate-300 rounded-full shadow-inner cursor-pointer transition-colors">
+                                            <div class="toggle-ball absolute w-4 h-4 mt-1 ml-1 bg-white rounded-full shadow transform transition-transform"></div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200 hover:bg-slate-100">
+                                    <span class="text-sm text-slate-700">Agentforce (in Agentforce Agents)</span>
+                                    <div class="relative">
+                                        <input type="checkbox" id="toggleAgentforce" class="toggle-checkbox absolute opacity-0 w-0 h-0"/>
+                                        <div class="toggle-label block w-10 h-6 bg-slate-300 rounded-full shadow-inner cursor-pointer transition-colors">
+                                            <div class="toggle-ball absolute w-4 h-4 mt-1 ml-1 bg-white rounded-full shadow transform transition-transform"></div>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center justify-between p-3 bg-slate-50 rounded-md border border-slate-200 hover:bg-slate-100">
+                                    <span class="text-sm text-slate-700">Agentforce (Default) Agent</span>
+                                     <div class="relative">
+                                        <input type="checkbox" id="toggleDefaultAgent" class="toggle-checkbox absolute opacity-0 w-0 h-0"/>
+                                        <div class="toggle-label block w-10 h-6 bg-slate-300 rounded-full shadow-inner cursor-pointer transition-colors">
+                                            <div class="toggle-ball absolute w-4 h-4 mt-1 ml-1 bg-white rounded-full shadow transform transition-transform"></div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-medium text-slate-700">Ensure EinsteinServiceAgent User Profile</h3>
+                            <p class="text-sm text-slate-600">Path: Setup → Users → Edit EinsteinServiceAgent. Set to "Einstein Agent User". (Conceptual)</p>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-medium text-slate-700">Publish Experience Cloud Site (if applicable)</h3>
+                            <p class="text-sm text-slate-600">Path: Setup → All Sites → Builder → Publish.</p>
+                            <button id="publishSiteBtn" class="mt-2 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-3 rounded-md text-sm transition">
+                                Simulate Publish Site
+                            </button>
+                            <span id="publishStatus" class="ml-3 text-sm text-green-600"></span>
+                        </div>
+                    </div>
+                     <p class="mt-4 text-xs text-slate-500">Click the toggles and button to simulate these setup actions.</p>
+                </div>
+            </div>
+            
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">5. Step-by-Step: Creating Your First Agent (Part 2)</h2>
+                    <p class="text-slate-700 mb-3">Now, let's walk through the agent creation wizard (simulated).</p>
+                    
+                    <div id="agentCreationWizard" class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <div id="wizardStep1" class="text-center">
+                            <p class="text-sm text-slate-600 mb-3">Path: Setup → Agentforce Agents</p>
+                            <button id="startNewAgentBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition">
+                                + New Agent
+                            </button>
+                        </div>
+
+                        <div id="wizardStep2" class="hidden">
+                            <h3 class="text-lg font-medium text-slate-700 mb-3">Select Agent Type</h3>
+                            <select class="w-full p-2 border border-slate-300 rounded-md focus:ring-sky-500 focus:border-sky-500">
+                                <option>Agentforce Service Agent</option>
+                                <option>Other Agent Type (Example)</option>
+                            </select>
+                            <button id="agentTypeNextBtn" class="mt-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-md transition">
+                                Next
+                            </button>
+                        </div>
+
+                        <div id="wizardStep3" class="hidden">
+                            <h3 class="text-lg font-medium text-slate-700 mb-3">Topics</h3>
+                            <p class="text-sm text-slate-600 mb-2">Default topics will be added. (e.g., General FAQ)</p>
+                            <div class="p-3 bg-slate-100 rounded border border-slate-200">
+                                <span class="text-sm text-slate-700">General FAQ</span> (auto-added)
+                            </div>
+                            <button id="topicsNextBtn" class="mt-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-md transition">
+                                Next
+                            </button>
+                        </div>
+                        
+                        <div id="wizardStep4" class="hidden">
+                            <h3 class="text-lg font-medium text-slate-700 mb-3">Configuration</h3>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Name:</label>
+                                    <input type="text" value="My First Agent" class="mt-1 w-full p-2 border border-slate-300 rounded-md">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">API Name:</label>
+                                    <input type="text" value="My_First_Agent" class="mt-1 w-full p-2 border border-slate-300 rounded-md" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Description & Role:</label>
+                                    <textarea rows="2" class="mt-1 w-full p-2 border border-slate-300 rounded-md">Handles basic customer inquiries.</textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">Agent User:</label>
+                                    <input type="text" value="EinsteinServiceAgent User" class="mt-1 w-full p-2 border border-slate-300 rounded-md" readonly>
+                                </div>
+                                <label class="flex items-center">
+                                    <input type="checkbox" checked class="h-4 w-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500">
+                                    <span class="ml-2 text-sm text-slate-700">Enable event logs</span>
+                                </label>
+                            </div>
+                            <div class="mt-6 flex justify-between">
+                                <button id="configBackBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-md transition">
+                                    Back
+                                </button>
+                                <button id="createAgentBtn" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md transition">
+                                    Create
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="wizardStep5" class="hidden">
+                            <h3 class="text-lg font-medium text-green-600 mb-3">Agent "My First Agent" Created!</h3>
+                            <p class="text-sm text-slate-600 mb-3">Next, on the agent’s Topics list, you would typically remove any pre-added topics except "General FAQ".</p>
+                            <div class="p-4 bg-slate-50 rounded border border-slate-200">
+                                <h4 class="font-medium text-slate-700 mb-2">Agent Topics:</h4>
+                                <ul id="agentTopicsList" class="space-y-1">
+                                    <li class="flex justify-between items-center p-2 bg-white border rounded"><span>General FAQ</span> <span class="text-xs text-green-500">(Keep)</span></li>
+                                    <li class="flex justify-between items-center p-2 bg-white border rounded"><span>Sample Topic A</span> <button class="text-xs text-red-500 hover:text-red-700 remove-topic-btn">Remove</button></li>
+                                    <li class="flex justify-between items-center p-2 bg-white border rounded"><span>Sample Topic B</span> <button class="text-xs text-red-500 hover:text-red-700 remove-topic-btn">Remove</button></li>
+                                </ul>
+                            </div>
+                             <button id="activateAgentBtn" class="mt-6 w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition">
+                                Activate Your Agent
+                            </button>
+                            <p id="activationStatus" class="text-center mt-3 text-sm"></p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide">
+                <div class="slide-content">
+                    <h2 class="text-2xl font-semibold text-sky-700 mb-4">End of Lab 1</h2>
+                    <div class="p-6 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
+                        <p class="text-lg font-medium text-green-700">Congratulations!</p>
+                        <p class="text-slate-700 mt-2">By completing this interactive session, you’ve reinforced your knowledge of Agentforce, simulated checking your environment readiness, and walked through building your first basic AI-driven agent in Salesforce.</p>
+                    </div>
+                    <p class="mt-6 text-slate-600">You are now more familiar with:</p>
+                    <ul class="list-disc list-inside space-y-1 text-slate-700 mt-2">
+                        <li>The roles of Prompt Builder, Agent Builder, Topics, and Actions.</li>
+                        <li>The key steps in setting up and creating an Agentforce agent.</li>
+                        <li>How the Gemini API can be used to power dynamic content within such tools.</li>
+                    </ul>
+                    <p class="mt-6 text-sm text-slate-500">Continue exploring and experimenting in your Salesforce Developer Org to master Agentforce!</p>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="bg-slate-200 p-4 flex items-center justify-between border-t border-slate-300">
+            <button id="prevBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed">
+                Previous
+            </button>
+            <div id="slideIndicator" class="text-sm text-slate-600">Slide 1 / 11</div>
+            <button id="nextBtn" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed">
+                Next
+            </button>
+        </footer>
+    </div>
+
+    <div id="simpleModal" class="modal">
+      <div class="modal-content">
+        <p id="modalMessage" class="text-slate-700"></p>
+        <button id="closeModalBtn" class="mt-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-md float-right">OK</button>
+      </div>
+    </div>
+
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const slideIndicator = document.getElementById('slideIndicator');
+        let currentSlide = 0;
+
+        // Modal elements
+        const simpleModal = document.getElementById('simpleModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+
+        function showModal(message) {
+            modalMessage.textContent = message;
+            simpleModal.style.display = 'block';
+        }
+
+        closeModalBtn.onclick = function() {
+            simpleModal.style.display = 'none';
+        }
+        window.onclick = function(event) {
+            if (event.target == simpleModal) {
+                simpleModal.style.display = 'none';
+            }
+        }
+
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                    const content = slide.querySelector('.slide-content');
+                    if (content) {
+                        content.style.animation = 'none'; 
+                        setTimeout(() => content.style.animation = '', 0); 
+                    }
+                }
+            });
+            slideIndicator.textContent = `Slide ${index + 1} / ${slides.length}`;
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === slides.length - 1;
+
+            if (index === 4) { 
+                renderAgentBuilderViz();
+            }
+        }
+
+        prevBtn.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        });
+
+        // --- Gemini API Integration ---
+        const API_KEY = ""; // Provided by Canvas environment
+        const API_URL_GEMINI = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+
+        async function callGeminiAPI(promptText) {
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: promptText }] }]
+            };
+            try {
+                const response = await fetch(API_URL_GEMINI, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error("Gemini API Error Response:", errorBody);
+                    throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+                }
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    console.error("Unexpected Gemini API response structure:", result);
+                    return "Sorry, I couldn't get a valid response from the AI.";
+                }
+            } catch (error) {
+                console.error('Error calling Gemini API:', error);
+                return `Error: ${error.message}. Check console for details.`;
+            }
+        }
+
+
+        // --- Slide 4: Prompt Builder Simulation with Gemini ---
+        const promptInput = document.getElementById('promptInput');
+        const generateResponseBtn = document.getElementById('generateResponseBtn');
+        const suggestQueryBtn = document.getElementById('suggestQueryBtn');
+        const aiResponseOutput = document.getElementById('aiResponseOutput');
+        const promptLoadingIndicator = document.getElementById('promptLoadingIndicator');
+
+        generateResponseBtn.addEventListener('click', async () => {
+            const userInput = promptInput.value.trim();
+            if (!userInput) {
+                aiResponseOutput.textContent = "Please enter a customer query first.";
+                return;
+            }
+            
+            promptLoadingIndicator.classList.remove('hidden');
+            aiResponseOutput.textContent = "Generating AI response...";
+            generateResponseBtn.disabled = true;
+            suggestQueryBtn.disabled = true;
+
+            const geminiPrompt = `You are a helpful customer service AI for a generic company. A customer says: "${userInput}". Provide a concise and helpful response.`;
+            const responseText = await callGeminiAPI(geminiPrompt);
+            
+            aiResponseOutput.textContent = responseText;
+            promptLoadingIndicator.classList.add('hidden');
+            generateResponseBtn.disabled = false;
+            suggestQueryBtn.disabled = false;
+        });
+
+        suggestQueryBtn.addEventListener('click', async () => {
+            promptLoadingIndicator.classList.remove('hidden');
+            aiResponseOutput.textContent = "Suggesting a query...";
+            generateResponseBtn.disabled = true;
+            suggestQueryBtn.disabled = true;
+            promptInput.value = "";
+
+
+            const geminiPrompt = "Suggest one common customer service query a user might ask. Provide only the query text itself, without any preamble or explanation. For example: How do I track my order?";
+            const suggestedQuery = await callGeminiAPI(geminiPrompt);
+            
+            promptInput.value = suggestedQuery.trim();
+            aiResponseOutput.textContent = "Query suggested. You can now get an AI response for it.";
+            promptLoadingIndicator.classList.add('hidden');
+            generateResponseBtn.disabled = false;
+            suggestQueryBtn.disabled = false;
+        });
+
+
+        // --- Slide 5: Agent Builder D3.js Visualization ---
+        function renderAgentBuilderViz() {
+            const vizContainer = document.getElementById('agentBuilderViz');
+            vizContainer.innerHTML = ''; 
+
+            const width = vizContainer.clientWidth;
+            const height = vizContainer.clientHeight;
+
+            const nodesData = [
+                { id: "Agent", type: "agent", fx: width / 2, fy: height / 5 },
+                { id: "Topic: Account Inquiry", type: "topic" },
+                { id: "Topic: FAQ", type: "topic" },
+                { id: "Topic: Order Status", type: "topic" },
+                { id: "Action: Get Account Details (Flow)", type: "action" },
+                { id: "Action: Answer Common Question (Template)", type: "action" },
+                { id: "Action: Update Case (Apex)", type: "action" },
+                { id: "Action: Check Order (Flow)", type: "action" }
+            ];
+
+            const linksData = [
+                { source: "Agent", target: "Topic: Account Inquiry" },
+                { source: "Agent", target: "Topic: FAQ" },
+                { source: "Agent", target: "Topic: Order Status" },
+                { source: "Topic: Account Inquiry", target: "Action: Get Account Details (Flow)" },
+                { source: "Topic: Account Inquiry", target: "Action: Update Case (Apex)" },
+                { source: "Topic: FAQ", target: "Action: Answer Common Question (Template)" },
+                { source: "Topic: Order Status", target: "Action: Check Order (Flow)" }
+            ];
+
+            const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+            const simulation = d3.forceSimulation(nodesData)
+                .force("link", d3.forceLink(linksData).id(d => d.id).distance(100))
+                .force("charge", d3.forceManyBody().strength(-250))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collision", d3.forceCollide().radius(d => d.type === 'agent' ? 40 : d.type === 'topic' ? 30 : 25));
+
+
+            const svg = d3.select(vizContainer).append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", [0, 0, width, height])
+                .attr("style", "max-width: 100%; height: auto;");
+
+            const link = svg.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(linksData)
+                .join("line")
+                .attr("class", "link");
+
+            const node = svg.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(nodesData)
+                .join("g")
+                .call(drag(simulation));
+
+            node.append("circle")
+                .attr("r", d => d.type === 'agent' ? 30 : d.type === 'topic' ? 20 : 15)
+                .attr("fill", d => {
+                    if (d.type === 'agent') return color(0); 
+                    if (d.type === 'topic') return color(1); 
+                    return color(2); 
+                });
+            
+            node.append("text")
+                .text(d => d.id.split(":")[0]) 
+                .attr("dy", d => d.type === 'agent' ? 38 : d.type === 'topic' ? 28 : 20) 
+                .style("font-size", "10px")
+                .style("fill", "#333")
+                .attr("text-anchor", "middle");
+
+            node.append("title") 
+                .text(d => `${d.type.toUpperCase()}: ${d.id}`);
+
+
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+
+            function drag(simulation) {
+                function dragstarted(event, d) {
+                    if (!event.active) simulation.alphaTarget(0.3).restart();
+                    d.fx = d.x;
+                    d.fy = d.y;
+                }
+                function dragged(event, d) {
+                    d.fx = event.x;
+                    d.fy = event.y;
+                }
+                function dragended(event, d) {
+                    if (!event.active) simulation.alphaTarget(0);
+                }
+                return d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended);
+            }
+        }
+        
+        // --- Slide 6: Topics Simulation ---
+        const topicsList = document.getElementById('topicsList');
+        const selectedTopicInfo = document.getElementById('selectedTopicInfo');
+        topicsList.addEventListener('click', (e) => {
+            if (e.target.tagName === 'LI') {
+                const topicName = e.target.dataset.topic;
+                selectedTopicInfo.textContent = `Selected Topic: ${topicName}. In a real agent, this topic would have associated actions and prompt templates. For example, "${topicName}" might trigger a flow to fetch relevant data or use a specific prompt to answer questions.`;
+                topicsList.querySelectorAll('li').forEach(li => li.classList.remove('bg-sky-200', 'font-semibold'));
+                e.target.classList.add('bg-sky-200', 'font-semibold');
+            }
+        });
+
+        // --- Slide 7: Actions Simulation ---
+        const actionTopicSelect = document.getElementById('actionTopicSelect');
+        const actionsForTopic = document.getElementById('actionsForTopic');
+        const exampleActions = {
+            "Account Inquiries": [
+                { name: "Get Account Details", type: "Salesforce Flow" },
+                { name: "Log Inquiry", type: "Apex Method" },
+                { name: "Provide Account Overview", type: "Prompt Template" }
+            ],
+            "Order Status": [
+                { name: "Check Order Status by ID", type: "Salesforce Flow" },
+                { name: "List Recent Orders", type: "Apex Method" }
+            ],
+            "Product FAQs": [
+                { name: "Answer General Product Question", type: "Prompt Template" },
+                { name: "Find Product Documentation", type: "Salesforce Flow" }
+            ]
+        };
+
+        actionTopicSelect.addEventListener('change', (e) => {
+            const selectedTopic = e.target.value;
+            actionsForTopic.innerHTML = ''; 
+            if (selectedTopic && exampleActions[selectedTopic]) {
+                exampleActions[selectedTopic].forEach(action => {
+                    const actionDiv = document.createElement('div');
+                    actionDiv.className = 'p-2 bg-sky-100 border border-sky-300 rounded mt-2 text-sm';
+                    actionDiv.innerHTML = `
+                        <h4 class="font-semibold text-sky-700">Action: ${action.name}</h4>
+                        <p class="text-xs text-sky-600">Type: ${action.type}</p>
+                    `;
+                    actionsForTopic.appendChild(actionDiv);
+                });
+            } else {
+                actionsForTopic.innerHTML = '<p class="text-sm text-slate-500">Actions will be listed here.</p>';
+            }
+        });
+        
+        // --- Slide 9: Creating Your First Agent (Part 1) Toggles & Buttons ---
+        const publishSiteBtn = document.getElementById('publishSiteBtn');
+        const publishStatus = document.getElementById('publishStatus');
+        
+        publishSiteBtn.addEventListener('click', () => {
+            publishStatus.textContent = 'Site publishing initiated... Done!';
+            setTimeout(() => publishStatus.textContent = '', 3000);
+        });
+
+        // --- Slide 10: Creating Your First Agent (Part 2) Wizard ---
+        const wizardSteps = [
+            document.getElementById('wizardStep1'),
+            document.getElementById('wizardStep2'),
+            document.getElementById('wizardStep3'),
+            document.getElementById('wizardStep4'),
+            document.getElementById('wizardStep5')
+        ];
+        let currentWizardStep = 0;
+
+        function showWizardStep(stepIndex) {
+            wizardSteps.forEach((step, index) => {
+                step.classList.toggle('hidden', index !== stepIndex);
+            });
+            currentWizardStep = stepIndex;
+        }
+
+        document.getElementById('startNewAgentBtn').addEventListener('click', () => showWizardStep(1));
+        document.getElementById('agentTypeNextBtn').addEventListener('click', () => showWizardStep(2));
+        document.getElementById('topicsNextBtn').addEventListener('click', () => showWizardStep(3));
+        document.getElementById('configBackBtn').addEventListener('click', () => showWizardStep(2));
+        document.getElementById('createAgentBtn').addEventListener('click', () => {
+            showWizardStep(4);
+            const agentTopicsList = document.getElementById('agentTopicsList');
+            agentTopicsList.innerHTML = `
+                <li class="flex justify-between items-center p-2 bg-white border rounded"><span>General FAQ</span> <span class="text-xs text-green-500">(Keep)</span></li>
+                <li class="flex justify-between items-center p-2 bg-white border rounded topic-to-remove"><span>Sample Topic A (Pre-added)</span> <button class="text-xs text-red-500 hover:text-red-700 remove-topic-btn">Remove</button></li>
+                <li class="flex justify-between items-center p-2 bg-white border rounded topic-to-remove"><span>Sample Topic B (Pre-added)</span> <button class="text-xs text-red-500 hover:text-red-700 remove-topic-btn">Remove</button></li>
+            `;
+            agentTopicsList.querySelectorAll('.remove-topic-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.target.closest('li.topic-to-remove').remove();
+                });
+            });
+        });
+        
+        document.getElementById('activateAgentBtn').addEventListener('click', () => {
+            const activationStatus = document.getElementById('activationStatus');
+            activationStatus.textContent = 'Agent "My First Agent" is now Active!';
+            activationStatus.className = 'text-center mt-3 text-sm text-green-600 font-semibold';
+        });
+
+
+        // Initialize first slide
+        showSlide(currentSlide);
+    </script>
+
+</body>
+</html>
