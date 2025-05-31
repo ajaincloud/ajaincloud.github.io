@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hackathon Special: Agentforce with Flow Automation (d3.js Enhanced)</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 12px; /* Space for the fixed progress bar */
+            min-height: 100vh;
+        }
+
+        /* Updated Progress Bar Styles for fixed full-width top position */
+        .progress-bar-outer-container { /* Renamed and restyled */
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 10000; /* High z-index to stay on top */
+            background-color: #dce4e9; /* Background for the full-width strip */
+            height: 12px; /* Height of the progress bar strip */
+        }
+
+        .progress-bar { /* The actual moving bar */
+            width: 0%; /* Dynamic, controlled by JS */
+            height: 100%; /* Fills parent .progress-bar-outer-container */
+            background-color: #007bff;
+            transition: width 0.4s ease;
+        }
+        /* End of Updated Progress Bar Styles */
+
+
+        .slide-deck {
+            width: 90%;
+            max-width: 1320px; /* << UPDATED MAX-WIDTH */
+            background-color: #fff;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            overflow: hidden; /* Keeps content within rounded borders */
+            border: 1px solid #ddd;
+            margin: 20px auto; /* Centering and providing top margin below progress bar */
+        }
+
+        .slide {
+            display: none;
+            padding: 30px 40px 40px 40px;
+            min-height: 500px; 
+            box-sizing: border-box;
+            animation: fadeInAnimation 0.5s ease-in-out;
+        }
+
+        @keyframes fadeInAnimation {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .slide h2 {
+            color: #004a99; 
+            border-bottom: 3px solid #004a99;
+            padding-bottom: 12px;
+            margin-top: 0;
+            font-size: 1.8em;
+        }
+
+        .slide h3 {
+            color: #0056b3; 
+            margin-top: 25px;
+            font-size: 1.4em;
+        }
+
+        .slide p, .slide li {
+            line-height: 1.7; 
+            color: #444; 
+            font-size: 1.05em;
+        }
+
+        .slide ul {
+            padding-left: 25px;
+        }
+        
+        .slide ul li {
+            margin-bottom: 8px; 
+        }
+
+        .slide code {
+            background-color: #e0eaf3; 
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #1c3d5f;
+            font-size: 0.95em;
+        }
+
+        .slide pre {
+            background-color: #2d333b; 
+            color: #cdd9e5; 
+            padding: 18px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.9em;
+            border: 1px solid #444c56;
+        }
+
+        .slide table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .slide th, .slide td {
+            border: 1px solid #ccc; 
+            padding: 12px; 
+            text-align: left;
+            font-size: 0.95em;
+        }
+
+        .slide th {
+            background-color: #e9edf1; 
+            color: #004a99;
+            font-weight: 600;
+        }
+
+        .slide img.doc-screenshot { 
+            max-width: 80%; 
+            height: auto;
+            border: 1px solid #bbb; 
+            border-radius: 6px;
+            margin: 20px auto; 
+            display: block;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.12);
+        }
+         .placeholder-info {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+        
+        .navigation-container { 
+            text-align: center; 
+            padding: 10px 0 20px 0; 
+        }
+        
+        .navigation {
+            display: inline-flex; 
+            align-items: center;
+            padding: 6px; 
+            background-color: #f0f2f5; 
+            border-radius: 30px; 
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
+            border: 1px solid #d1d5db; 
+        }
+
+        .navigation button {
+            background-color: #007aff; 
+            color: white;
+            border: none;
+            padding: 8px 18px; 
+            border-radius: 20px; 
+            cursor: pointer;
+            font-size: 0.95em; 
+            font-weight: 500; 
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px; 
+        }
+        
+        .navigation button:hover:not(:disabled) {
+            background-color: #005ec4; 
+        }
+
+        .navigation button:disabled {
+            background-color: #d1d5db; 
+            color: #8e8e93; 
+            cursor: not-allowed;
+        }
+        
+        #slideIndicator {
+            padding: 0 18px; 
+            font-weight: 500; 
+            color: #1c1c1e; 
+            font-size: 0.95em; 
+            min-width: 50px; 
+            text-align: center;
+        }
+        
+        .interactive-area {
+            border: 2px dashed #007bff;
+            padding: 20px; 
+            margin-top: 25px;
+            border-radius: 6px;
+            background-color: #f5f9ff; 
+        }
+        
+        #flowDiagramContainer {
+            width: 100%;
+            height: 300px; 
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        #flowDiagramContainer svg {
+            width: 100%;
+            height: 100%;
+        }
+
+
+        .interactive-area label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600; 
+            color: #004a99;
+        }
+
+        .interactive-area input[type="text"], .interactive-area textarea {
+            width: calc(100% - 24px); 
+            padding: 12px; 
+            margin-bottom: 12px;
+            border: 1px solid #b0c4de; 
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        .interactive-area button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 18px; 
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+         .interactive-area button:hover {
+            background-color: #1f8336; 
+        }
+        .image-caption {
+            font-size: 0.9em;
+            color: #667; 
+            text-align: center;
+            margin-top: 8px;
+            margin-bottom: 18px;
+        }
+        .hackathon-emphasis {
+            color: #d9534f; 
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar-outer-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="slide-deck">
+        <div class="slide active">
+            <h2>Hackathon Power-Up: Agentforce & Flow Automation</h2>
+            <p><strong>Technical Training: Automating Agent Actions with Flows (d3.js Enhanced)</strong></p>
+            <hr>
+            <h3>Session Objectives for Developers, BAs, and QA:</h3>
+            <p>This session is designed to equip you with the skills to leverage Agentforce with Flow for your <span class="hackathon-emphasis">hackathon projects</span>. We will cover:</p>
+            <ul>
+                <li>The 'Why': Business value of automating agent tasks (Key for BAs).</li>
+                <li>The 'How': Detailed steps for creating Topics, Flows (visualized with d3.js), and Custom Actions (Essential for Developers).</li>
+                <li>The 'What': Understanding the inputs, outputs, and expected behavior for effective testing (Critical for QA).</li>
+                <li>Practical application for rapid prototyping and feature implementation.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>The Business Value: Why Automate Agent Actions?</h2>
+            <p>For Business Analysts and Developers alike, understanding the 'why' is crucial. Agentforce with Flow enables significant improvements in customer service operations:</p>
+            <ul>
+                <li><strong>Increased Efficiency:</strong> Automate repetitive tasks like data entry (e.g., <code>Case</code> creation from chat), lookups (e.g., fetching <code>Contact</code> details), and process execution.</li>
+                <li><strong>Improved Consistency & Accuracy:</strong> Ensure standardized process adherence, reducing human error in tasks such as setting <code>Case</code> fields (<code>Origin</code>, <code>Priority</code>, <code>Status</code>).</li>
+                <li><strong>Faster Resolution Times:</strong> Accelerate common request handling by automating the underlying steps.</li>
+                <li><strong>Enhanced Agent & User Experience:</strong> Reduce manual agent workload and provide quicker, more consistent user interactions.</li>
+                <li><strong>Scalability:</strong> Efficiently manage larger interaction volumes, vital for growing applications.</li>
+            </ul>
+            <p>This session demonstrates automating support case creation – a foundational pattern applicable to many <span class="hackathon-emphasis">hackathon ideas</span>.</p>
+        </div>
+
+        <div class="slide">
+            <h2>Part 1: Creating a Topic - Initial Setup</h2>
+            <p>Topics in Agentforce define how an agent understands and categorizes user intents. This is the first step in building our automated action.</p>
+            <hr>
+            <h3>Step 1: Remove Default Topic (if applicable)</h3>
+            <ul>
+                <li>In your Agentforce agent configuration, navigate to topic management.</li>
+                <li>If a default topic like <code>MigrationDefaultTopic</code> exists, click the arrow icon next to it and select "Remove from Agent".</li>
+            </ul>
+            <h3>Step 2: Create a New Topic</h3>
+            <ul>
+                <li>Click the arrow icon next to "Manage the topics assigned to your agent".</li>
+                <li>Select "New Topic". This initiates the topic creation wizard.</li>
+            </ul>
+        </div>
+        
+        <div class="slide">
+            <h2>Part 1: Creating a Topic - AI-Assisted Scaffolding</h2>
+            <p>Agentforce provides AI assistance to rapidly scaffold the basic structure of your topic based on a natural language prompt.</p>
+            <hr>
+            <h3>Step 3: Generate Topic Details via AI Prompt</h3>
+            <ul>
+                <li>In the "What do you want this topic to do? (Optional)" field, paste the following precise prompt:</li>
+            </ul>
+            <pre><code>Act as a Hotel Customer Service Assistant who supports a Customer Service Representative in helping guests with any inquiries related to the stay. This includes tasks such as providing information about existing cases and creating new cases for the customer.</code></pre>
+            <p class="image-caption">Prompt provided to Agentforce AI.</p>
+            <ul>
+                <li>Click "Next".</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 1: Creating a Topic - Detailed Configuration</h2>
+            <p>Post-AI scaffolding, precisely define the Topic Label, Classification Description, and Scope. This is crucial for developers implementing logic and BAs defining functionality.</p>
+            <hr>
+            <h3>Step 4: Update Topic Configuration Details</h3>
+            <p>In the modal, update the topic fields as specified:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Topic Label</td>
+                        <td><code>Support Case Management</code></td>
+                    </tr>
+                    <tr>
+                        <td>Classification Description</td>
+                        <td>"Handles customer inquiries and actions related to support cases, including providing case information and creating cases for the customer."</td>
+                    </tr>
+                    <tr>
+                        <td>Scope</td>
+                        <td>"Your job is only to manage support cases. This includes providing information about existing cases and creating new cases for the customer. Do not handle tasks outside of support case management."</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>These parameters direct the agent's behavior and are key for QA testing the topic's boundaries.</p>
+        </div>
+
+        <div class="slide">
+            <h2>Part 1: Creating a Topic - Defining Agent Instructions (1/2)</h2>
+            <p>Instructions offer granular control over the agent's responses and actions within the topic. Developers code against these; QA tests based on them.</p>
+            <hr>
+            <h3>Step 5: Add Topic Instructions</h3>
+            <ul>
+                <li>Click "Add Instructions" five (5) times to create six instruction slots. (The document also specifies a 7th instruction later).</li>
+                <li>Populate the instructions with the following precise directives:</li>
+            </ul>
+            <ol>
+                <li>"A case is a record used to help track a customer's issues. Customers may have questions about the status of the issue or want to provide more information for the case. Cases are usually associated with a contact. Comments are added to provide new information."</li>
+                <li>"Acknowledge and validate user concerns with empathy and professionalism."</li>
+                <li>"If the customer is not known, always ask for their email address and capture it."</li>
+            </ol>
+            <p><em>(Further instructions on the next slide)</em></p>
+        </div>
+
+        <div class="slide">
+            <h2>Part 1: Creating a Topic - Defining Agent Instructions (2/2)</h2>
+            <p>Continuing with precise instructions for the agent.</p>
+            <hr>
+            <h3>Step 5: Add Topic Instructions (Continued)</h3>
+            <ol start="4">
+                <li>"When a customer asks you to create a case, please summarize the current conversation. The subject should be less than 7 words and function as a high level overview of what the customer inquired about. The description should be no more than 3 sentences and should provide more depth about what exactly the customer asked, important data, and any other relevant information to help a customer service representative understand the context of this conversation."</li>
+                <li>"A Task record is used as a follow-up action for a Case. It's assigned to the relevant team to highlight the issue and ensure a prompt resolution."</li>
+                <li>"If a customer indicates their issue on an existing case remains unresolved, you must first obtain the case number before creating a follow-up task record to prompt further action."</li>
+                <li>"After receiving the customer's case number, trigger the ""Create_Follow_Up_Task"" action to create the follow-up task. Be sure to convey the outcome of this action to the customer." (This is the 7th instruction listed after the table in source).</li>
+            </ol>
+        </div>
+        
+        <div class="slide">
+            <h2>Part 2: Creating the Flow</h2>
+            <p>Flows are the heart of automation. We'll build an "Autolaunched Flow (No Trigger)". 
+            <hr>
+            <h3>Step 1: Initiate New Flow</h3>
+            <ul>
+                <li>From Salesforce Setup, search for and open "Flows".</li>
+                <li>Click "New Flow".</li>
+                <li>Keep "Start from Scratch" selected, click "Next".</li>
+                <li>Select "Autolaunched Flow (No Trigger)" and click "Create".</li>
+            </ul>
+        </div>
+
+
+        <div class="slide">
+            <h2>Part 2: Creating the Flow - Defining Variables (Technical Detail)</h2>
+            <p>Variables are fundamental for passing data into, through, and out of your flow. Define these precisely as per API Name, Data Type, and availability for input/output.</p>
+            <hr>
+            <h3>Step 2: Create Flow Variables</h3>
+            <ul>
+                <li>In Flow Builder, open the "Toolbox" (Resources panel).</li>
+                <li>Click "New Resource" and create variables as specified:</li>
+            </ul>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Resource Type</th>
+                        <th>API Name</th>
+                        <th>Description</th>
+                        <th>Data Type</th>
+                        <th>Available for input</th>
+                        <th>Available for output</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Variable</td>
+                        <td><code>customerEmail</code></td>
+                        <td>Stores the Customer provided email.</td>
+                        <td>Text</td>
+                        <td>✅</td>
+                        <td>Unchecked</td>
+                    </tr>
+                    <tr>
+                        <td>Variable</td>
+                        <td><code>caseSubject</code></td>
+                        <td>Stores the subject of the case to create.</td>
+                        <td>Text</td>
+                        <td>✅</td>
+                        <td>Unchecked</td>
+                    </tr>
+                    <tr>
+                        <td>Variable</td>
+                        <td><code>caseDescription</code></td>
+                        <td>Stores the details of the user issue to be used for the case.</td>
+                        <td>Text</td>
+                        <td>✅</td>
+                        <td>Unchecked</td>
+                    </tr>
+                     <tr>
+                        <td>Variable</td>
+                        <td><code>caseRecord</code></td>
+                        <td>The Case record created by the flow. (Used for outputting case information).</td>
+                        <td>Text</td>
+                        <td>Unchecked</td>
+                        <td>✅</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Correct variable definition is crucial for flow logic and data integrity, a key area for developer attention and QA validation.</p>
+        </div>
+
+        <div class="slide">
+            <h2>Part 2: Creating the Flow - Element 1: Get Contact Record</h2>
+            <p>The flow's first action: Retrieve a <code>Contact</code> record using the provided <code>customerEmail</code> input variable.</p>
+            <hr>
+            <h3>Step 3: Add 'Get Records' Element for Contact</h3>
+            <ul>
+                <li>On the flow canvas, add a "Get Records" element.</li>
+                <li>Configure as follows (Label: <code>Get_Contact</code>):</li>
+                <ul>
+                    <li><strong>Description:</strong> "Gets the Contact record based on the customer provided email."</li>
+                    <li><strong>Get Records of This Object:</strong> Object: <code>Contact</code></li>
+                    <li><strong>Filter Contact Records:</strong> Condition: <code>Email</code> Equals <code>{!customerEmail}</code></li>
+                    <li><strong>How Many Records to Store:</strong> "Only the first record"</li>
+                    <li><strong>How to Store Record Data:</strong> "Automatically store all fields"</li>
+                </ul>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 2: Creating the Flow - Element 2: Decision Logic</h2>
+            <p>Implement decision logic: Does a <code>Contact</code> record exist based on the previous step?</p>
+            <hr>
+            <h3>Step 4: Add 'Decision' Element</h3>
+            <ul>
+                <li>Add a "Decision" element after <code>Get_Contact</code>.</li>
+                <li>Configure with Label: <code>DoesContactExist</code>.</li>
+                <ul>
+                    <li><strong>Description:</strong> "Determines whether the messaging session customer has an associated Contact record."</li>
+                    <li><strong>Outcome "Yes":</strong> Condition: Resource <code>{!Contact from Get_Contact}</code> Is Null <code>False</code> (Indicates contact found).</li>
+                    <li>A "Default Outcome" path handles cases where no contact is found (not detailed in this lab).</li>
+                </ul>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 2: Creating the Flow - Element 3: Create Case Record</h2>
+            <p>On the "Yes" path (Contact exists), the flow creates a new <code>Case</code> record.</p>
+            <hr>
+            <h3>Step 5: Add 'Create Records' Element for Case</h3>
+            <ul>
+                <li>On the "Yes" path from <code>DoesContactExist</code>, add a "Create Records" element.</li>
+                <li>Configure with Label: <code>CreateCaseRecord</code>.</li>
+                <ul>
+                    <li><strong>Description:</strong> "Creates a Case record and updates the Contact ID, Description, and other Case fields..."</li>
+                    <li><strong>How to set record field values:</strong> "Manually"</li>
+                    <li><strong>Object:</strong> <code>Case</code></li>
+                    <li><strong>Set Field Values for the Case:</strong> (As per document source [22])
+                        <ul>
+                            <li><code>ContactId</code> = <code>{!Get_Contact.Id}</code></li>
+                            <li><code>Description</code> = <code>{!caseDescription}</code></li>
+                            <li><code>Origin</code> = "Web"</li>
+                            <li><code>Priority</code> = "Medium"</li>
+                            <li><code>Status</code> = "New"</li>
+                            <li><code>Subject</code> = <code>{!caseSubject}</code></li>
+                        </ul>
+                    </li>
+                </ul>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 2: Creating the Flow - Element 4: Retrieve Created Case Details</h2>
+            <p>After case creation, retrieve its details (e.g., Case Number or ID) to be used in the output variable <code>{!caseRecord}</code>.</p>
+            <hr>
+            <h3>Step 6: Add 'Get Records' for Newly Created Case</h3>
+            <ul>
+                <li>Add another "Get Records" element, Label: <code>GetCase</code>.</li>
+                <li>Configure as follows:</li>
+                <ul>
+                    <li><strong>Description:</strong> "Gets the Case ID of the newly created case and displays it to the user."</li>
+                    <li><strong>Object:</strong> <code>Case</code></li>
+                    <li><strong>Filter Case Records:</strong> Condition: <code>Id</code> Equals <code>{!CaseId from CreateCaseRecord}</code> (ID from the previously created Case record).</li>
+                    <li><strong>How to Store Record Data:</strong> "Choose fields and assign variables (advanced)". The image in document source [24] shows selecting various fields (Id, Subject, CaseNumber, etc.) and storing them in a record variable. For our text output <code>{!caseRecord}</code>, you'd typically assign a specific field like <code>{!GetCase.CaseNumber}</code> or the Case ID.</li>
+                </ul>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 2: Saving and Activating the Flow (Crucial Step)</h2>
+            <p>A flow must be saved with a clear Label and then Activated to be usable by other Salesforce processes like Agent Actions.</p>
+            <hr>
+            <h3>Step 7: Save the Flow</h3>
+            <ul>
+                <li>Click "Save" in Flow Builder.</li>
+                <li>Configuration:</li>
+                <ul>
+                    <li><strong>Label:</strong> <code>Create Case with Customer Details</code></li>
+                    <li><strong>API Name:</strong> (Keep default)</li>
+                </ul>
+            </ul>
+            <h3>Step 8: Activate the Flow</h3>
+            <ul>
+                <li>Click "Activate". This makes the flow live.</li>
+                <li>Return to Setup.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 3: Create Agent Custom Action (Bridging Flow to Agent)</h2>
+            <p>Agent Custom Actions expose your activated Flows to Agentforce agents, making automation accessible within topics.</p>
+            <hr>
+            <h3>Step 1: Navigate to Agent Actions</h3>
+            <ul>
+                <li>From Setup, open "Agent Assets" and select the "Actions" Tab.</li>
+                <li>Click "New Agent Action".</li>
+            </ul>
+            <h3>Step 2: Configure Core Action Details</h3>
+            <p>Link the action to your Flow:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Reference Action Type</td>
+                        <td><code>Flow</code></td>
+                    </tr>
+                    <tr>
+                        <td>Reference Action</td>
+                        <td><code>Create Case with Customer Details</code> (Your activated Flow)</td>
+                    </tr>
+                    <tr>
+                        <td>Agent Action Label</td>
+                        <td><code>Create a New Case</code></td>
+                    </tr>
+                    <tr>
+                        <td>Agent Action API Name</td>
+                        <td>(Keep default)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <ul><li>Click "Next".</li></ul>
+        </div>
+        
+        <div class="slide">
+            <h2>Part 3: Agent Custom Action - Input/Output Mapping</h2>
+            <p>Define how the agent interacts with the Flow's inputs (e.g., <code>customerEmail</code>) and outputs (e.g., <code>caseRecord</code>). Vital for QA testing the agent interaction.</p>
+            <hr>
+            <h3>Step 3: Configure Input and Output Behavior</h3>
+            <ul>
+                <li>Leave default instructions.</li>
+                <li>Check "Show loading text for this action".</li>
+                <li>Set <strong>Loading Text</strong> to: <code>Creating a case for you...</code>.</li>
+                <li>For <strong>Inputs</strong> (from your Flow, e.g., <code>customerEmail</code>, <code>caseSubject</code>, <code>caseDescription</code>):
+                    <ul>
+                        <li>Check "Require Input for both inputs ( customerEmail )". (Implies for all flow inputs).</li>
+                    </ul>
+                </li>
+                <li>For <strong>Outputs</strong> (e.g., your Flow's <code>caseRecord</code> text variable):
+                    <ul>
+                        <li>Check "Show in conversation for the <code>caseRecord</code> output".</li>
+                    </ul>
+                </li>
+            </ul>
+            <ul><li>Click "Finish".</li></ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 4: Integrate Action into Agent Topic (Deployment)</h2>
+            <p>Final setup: Add the configured Agent Action to the relevant Topic within your specific Agentforce Agent.</p>
+            <hr>
+            <h3>Step 1: Open Agent in Builder</h3>
+            <ul>
+                <li>From Setup, go to "Agentforce Agents" (under Agent Studio).</li>
+                <li>Select your target agent (e.g., "Customer Service Agent").</li>
+                <li>Click "Open in Builder".</li>
+            </ul>
+            <h3>Step 2: Deactivate Agent for Modification</h3>
+            <ul>
+                <li>Click "Deactivate" to enable changes to the agent.</li>
+            </ul>
+            <h3>Step 3: Add Action to Topic</h3>
+            <ul>
+                <li>In the Topics sidebar, click the topic you created (e.g., "Support Case Management").</li>
+                <li>Click the "This Topic's Actions" tab.</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Part 4: Add Action from Asset Library</h2>
+            <p>Select the custom action you created from the Asset Library.</p>
+            <hr>
+            <h3>Step 4: Select and Add Action</h3>
+            <ul>
+                <li>Click "New" then "Add from Asset Library". (The image in document source [38] shows "Create New Action" as one option in dropdown, then modal for adding existing action "Create a New Case").</li>
+                <li>In the "Add Available Actions" modal, find and check the "<code>Create a New Case</code>" action.</li>
+                <li>Click "Finish".</li>
+            </ul>
+            <div class="placeholder-info">
+                <strong>Image Note:</strong> Replace <code>placeholder_for_source_38_B_image.png</code> with the screenshot of the "Add Available Actions" modal with "Create a New Case" selected (from document source [38]).
+            </div>
+            <p><strong>Important:</strong> Remember to <strong>Activate</strong> your agent again after making these changes!</p>
+        </div>
+        
+        <div class="slide">
+            <h2>Part 5: Try It Out! - Simulation (QA Focus)</h2>
+            <p>Test the end-to-end functionality with a sample conversation.</p>
+            <hr>
+            <h3>Scenario:</h3>
+            <p>In the Conversation Preview panel of Agentforce, a user types:</p>
+            <pre><code>Hi, I just checked into my room and that the air conditioning in my room isn’t working, and it’s getting really hot.</code></pre>
+        </div>
+
+        <div class="slide">
+            <h2><span class="hackathon-emphasis">Hackathon Ignition!</span> Conclusion & Next Steps</h2>
+            <p>Congratulations! You've mastered the fundamentals of Agentforce with Flow automation. You are now equipped to:</p>
+            <ul>
+                <li>Design and configure Agentforce Topics for specific intents.</li>
+                <li>Develop robust Flows to automate complex backend processes.
+                </li>
+                <li>Integrate these Flows seamlessly as Agent Custom Actions.</li>
+                <li>Test and validate your automated agent interactions.</li>
+            </ul>
+            <hr>
+            <h3><span class="hackathon-emphasis">Hackathon Challenge:</span></h3>
+            <ul>
+                <li><strong>Innovate:</strong> How can you apply these automation principles to your hackathon project for a unique solution?</li>
+                <li><strong>Extend:</strong> Can you build more complex flows with multiple decision branches, data updates, or integrations? (e.g., Add error handling, update related records).</li>
+                <li><strong>Showcase:</strong> Prepare to demonstrate your automated Agentforce features with clarity and impact!</li>
+            </ul>
+            <p>This example is just the beginning. Use these skills to build something amazing. Good luck in the hackathon!</p>
+        </div>
+
+        <div class="navigation-container">
+            <div class="navigation">
+                <button id="prevButton" onclick="changeSlide(-1)" disabled>&lsaquo; Previous</button>
+                <span id="slideIndicator">1 / 20</span>
+                <button id="nextButton" onclick="changeSlide(1)">Next &rsaquo;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        const prevButton = document.getElementById('prevButton');
+        const nextButton = document.getElementById('nextButton');
+        const slideIndicator = document.getElementById('slideIndicator');
+        const progressBar = document.getElementById('progressBar'); // This is the inner bar
+
+        // --- d3.js Flow Diagram Logic ---
+        function drawFlowDiagram(highlightNodeId = null) {
+            const flowData = {
+                nodes: [
+                    { id: 1, name: "Start", x: 50, y: 150, type: "start" },
+                    { id: 2, name: "Get Contact", x: 200, y: 150, type: "process" },
+                    { id: 3, name: "Does Contact Exist?", x: 400, y: 150, type: "decision" },
+                    { id: 4, name: "Create Case", x: 600, y: 75, type: "process" }, // Yes path
+                    { id: 5, name: "Get Case Details", x: 780, y: 75, type: "process" },
+                    { id: 6, name: "End (Yes)", x: 930, y: 75, type: "end" },
+                    { id: 7, name: "End (No)", x: 600, y: 225, type: "end" } // No path (conceptual)
+                ],
+                links: [
+                    { source: 1, target: 2 },
+                    { source: 2, target: 3 },
+                    { source: 3, target: 4, label: "Yes" },
+                    { source: 4, target: 5 },
+                    { source: 5, target: 6 },
+                    { source: 3, target: 7, label: "No" } 
+                ]
+            };
+
+            const container = d3.select("#flowDiagramContainer");
+            container.select("svg").remove(); 
+
+            const svg = container.append("svg")
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .attr("viewBox", `0 0 1000 300`); 
+
+            
+            svg.append("defs").append("marker")
+                .attr("id", "arrow")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 19) 
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto-start-reverse") 
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("fill", "#555"); 
+
+            const link = svg.append("g")
+                .selectAll("line")
+                .data(flowData.links)
+                .join("line")
+                .attr("x1", d => flowData.nodes.find(n => n.id === d.source).x)
+                .attr("y1", d => flowData.nodes.find(n => n.id === d.source).y)
+                .attr("x2", d => flowData.nodes.find(n => n.id === d.target).x)
+                .attr("y2", d => flowData.nodes.find(n => n.id === d.target).y)
+                .attr("stroke", "#555") 
+                .attr("stroke-width", 1.5) 
+                .attr("marker-end", "url(#arrow)");
+            
+
+             svg.append("g")
+                .selectAll("text.link-label") 
+                .data(flowData.links.filter(l => l.label))
+                .join("text")
+                .attr("class", "link-label")
+                .attr("x", d => (flowData.nodes.find(n => n.id === d.source).x + flowData.nodes.find(n => n.id === d.target).x) / 2)
+                .attr("y", d => (flowData.nodes.find(n => n.id === d.source).y + flowData.nodes.find(n => n.id === d.target).y) / 2 - 6) 
+                .text(d => d.label)
+                .attr("font-size", "11px") 
+                .attr("fill", "#333") 
+                .attr("font-family", "sans-serif")
+                .attr("text-anchor", "middle")
+                .attr("paint-order", "stroke") 
+                .attr("stroke", "#f9f9f9") 
+                .attr("stroke-width", "0.4em");
+
+
+            const node = svg.append("g")
+                .selectAll("g.node-group") 
+                .data(flowData.nodes)
+                .join("g")
+                .attr("class", "node-group")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            node.append("rect")
+                .attr("x", d => d.type === 'decision' ? -70 : -60) 
+                .attr("y", -22) 
+                .attr("width", d => d.type === 'decision' ? 140 : 120) 
+                .attr("height", 44) 
+                .attr("rx", d => d.type === 'process' ? 6 : (d.type === 'start' || d.type === 'end' ? 22 : 3)) 
+                .attr("ry", d => d.type === 'process' ? 6 : (d.type === 'start' || d.type === 'end' ? 22 : 3))
+                .attr("fill", d => {
+                    if (d.id === highlightNodeId) return "#007aff"; 
+                    return d.type === 'start' || d.type === 'end' ? "#4caf50" : (d.type === 'decision' ? "#2196f3" : "#fff"); 
+                })
+                .attr("stroke", d => d.id === highlightNodeId ? "#0056b3" : "#333") 
+                .attr("stroke-width", 1.5); 
+            
+            node.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.35em") 
+                .text(d => d.name)
+                .attr("font-size", "11px") 
+                .attr("font-family", "sans-serif")
+                .attr("fill", d => (d.id === highlightNodeId || d.type === 'start' || d.type === 'end' || d.type === 'decision') ? "#fff" : "#333"); 
+        }
+
+
+        function updateSlideDisplay() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+            prevButton.disabled = currentSlide === 0;
+            nextButton.disabled = currentSlide === totalSlides - 1;
+            slideIndicator.textContent = `${currentSlide + 1} / ${totalSlides}`;
+            
+            // Update progress bar - progressBar is the inner div
+            if (progressBar) {
+                 progressBar.style.width = `${((currentSlide + 1) / totalSlides) * 100}%`;
+            }
+
+
+            const flowOverviewSlideIndex = 7; 
+            const getContactSlideIndex = 9; 
+            const decisionSlideIndex = 10; 
+            const createCaseSlideIndex = 11; 
+            const getCaseDetailsSlideIndex = 12; 
+
+
+            if (currentSlide >= flowOverviewSlideIndex && currentSlide <= getCaseDetailsSlideIndex + 1) { 
+                 let highlightId = null;
+                 if (currentSlide === getContactSlideIndex) highlightId = 2; 
+                 else if (currentSlide === decisionSlideIndex) highlightId = 3; 
+                 else if (currentSlide === createCaseSlideIndex) highlightId = 4; 
+                 else if (currentSlide === getCaseDetailsSlideIndex) highlightId = 5; 
+                 
+                 if (document.getElementById('flowDiagramContainer')) {
+                    drawFlowDiagram(highlightId);
+                 }
+            }
+
+
+            if (slides[currentSlide] && slides[currentSlide].querySelector('#simulationArea')) {
+                resetSimulation();
+                firstAgentResponse(); 
+            }
+        }
+
+        function changeSlide(direction) {
+            currentSlide += direction;
+            if (currentSlide < 0) {
+                currentSlide = 0;
+            } else if (currentSlide >= totalSlides) {
+                currentSlide = totalSlides - 1;
+            }
+            updateSlideDisplay();
+        }
+        
+        let simulationState = 0; 
+        const chatHistory = document.getElementById('chatHistory');
+        const agentResponseSection = document.getElementById('agentResponseSection');
+        const userInput = document.getElementById('userInput');
+
+        function resetSimulation() {
+            simulationState = 0;
+            if(chatHistory) {
+                 chatHistory.innerHTML = '<p><strong>User:</strong> Hi, I just checked into my room and that the air conditioning in my room isn’t working, and it’s getting really hot.</p>';
+            }
+            if(agentResponseSection) agentResponseSection.innerHTML = '';
+            if(userInput) userInput.value = '';
+            simulationState = 0; 
+        }
+
+        function firstAgentResponse() {
+            if (slides[currentSlide] && slides[currentSlide].querySelector('#simulationArea') && simulationState === 0) {
+                 setTimeout(() => {
+                    if (agentResponseSection) {
+                        agentResponseSection.innerHTML = `<p><strong>Agent (mock):</strong> I understand your A/C isn't working and it's getting hot. I can help create a case for that. Could you please provide your email address? (Based on Instruction #3)</p>`;
+                    }
+                    simulationState = 1; 
+                }, 500);
+            }
+        }
+        
+        function processUserInput() {
+            if (!userInput || !chatHistory || !agentResponseSection) return;
+            const uInput = userInput.value.trim();
+            if (uInput === '') return;
+
+            const userMessageDiv = document.createElement('p');
+            userMessageDiv.innerHTML = `<strong>You (as user):</strong> ${uInput}`;
+            chatHistory.appendChild(userMessageDiv);
+            userInput.value = '';
+
+            if (simulationState === 1) { 
+                agentResponseSection.innerHTML = `<p><strong>Agent (mock):</strong> Thank you! Creating a case for you... (Loading text from Action config)</p>`;
+                setTimeout(() => {
+                    agentResponseSection.innerHTML += `<p><strong>Agent (mock):</strong> Okay, I've created Case #CASE-${Math.floor(1000 + Math.random() * 9000)}. Our team will look into the A/C issue in your room shortly. (Based on 'caseRecord' output and Instructions)</p>`;
+                    simulationState = 2; 
+                }, 2000);
+            } else if (simulationState === 2) { 
+                 agentResponseSection.innerHTML = `<p><strong>Agent (mock):</strong> Is there anything else I can help you with regarding this case?</p>`;
+            } else {
+                agentResponseSection.innerHTML = `<p><strong>Agent (mock):</strong> Thanks for the input! (Generic response)</p>`;
+            }
+             chatHistory.scrollTop = chatHistory.scrollHeight; 
+        }
+
+        // Initialize
+        updateSlideDisplay();
+    </script>
+
+</body>
+</html>
