@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Guide: Slack, Salesforce Flow & Agentforce Integration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+            color: #1f2937; /* Tailwind gray-800 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        #presentation-container {
+            background-color: white;
+            border-radius: 0.75rem; /* Tailwind rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Tailwind shadow-lg */
+            width: 100%;
+            max-width: 900px;
+            overflow: hidden;
+        }
+        .slide {
+            display: none;
+            padding: 2rem; /* Tailwind p-8 */
+            min-height: 500px; /* Adjusted for content */
+            box-sizing: border-box;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .slide.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-title {
+            font-size: 1.875rem; /* Tailwind text-3xl */
+            font-weight: bold;
+            color: #1e40af; /* Tailwind blue-800 */
+            margin-bottom: 1.5rem; /* Tailwind mb-6 */
+            text-align: center;
+        }
+        .slide-content {
+            font-size: 1rem; /* Tailwind text-base */
+            line-height: 1.6;
+        }
+        .slide-content h3 {
+            font-size: 1.25rem; /* Tailwind text-xl */
+            font-weight: 600; /* Tailwind semibold */
+            color: #1d4ed8; /* Tailwind blue-700 */
+            margin-top: 1.5rem; /* Tailwind mt-6 */
+            margin-bottom: 0.75rem; /* Tailwind mb-3 */
+        }
+        .slide-content ul {
+            list-style-type: disc;
+            margin-left: 1.5rem; /* Tailwind ml-6 */
+            margin-bottom: 1rem; /* Tailwind mb-4 */
+        }
+        .slide-content code {
+            background-color: #e5e7eb; /* Tailwind gray-200 */
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem; /* Tailwind rounded-md */
+            font-family: monospace;
+        }
+        .navigation-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem; /* Tailwind mt-6 */
+            padding: 0 1rem 1rem 1rem;
+        }
+        .nav-button {
+            background-color: #2563eb; /* Tailwind blue-600 */
+            color: white;
+            padding: 0.75rem 1.5rem; /* Tailwind py-3 px-6 */
+            border: none;
+            border-radius: 0.5rem; /* Tailwind rounded-lg */
+            font-size: 1rem; /* Tailwind text-base */
+            font-weight: 500; /* Tailwind medium */
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .nav-button:hover {
+            background-color: #1d4ed8; /* Tailwind blue-700 */
+        }
+        .nav-button:disabled {
+            background-color: #9ca3af; /* Tailwind gray-400 */
+            cursor: not-allowed;
+        }
+        .progress-indicator {
+            text-align: center;
+            font-size: 0.875rem; /* Tailwind text-sm */
+            color: #4b5563; /* Tailwind gray-600 */
+            margin-top: 0.5rem; /* Tailwind mt-2 */
+            padding-bottom: 1rem;
+        }
+
+        /* Simulation styles */
+        .simulation-box {
+            border: 2px dashed #9ca3af; /* Tailwind gray-400 */
+            border-radius: 0.5rem; /* Tailwind rounded-lg */
+            padding: 1.5rem; /* Tailwind p-6 */
+            margin-top: 1.5rem; /* Tailwind mt-6 */
+            background-color: #f9fafb; /* Tailwind gray-50 */
+        }
+        .simulation-box h4 {
+            font-size: 1.125rem; /* Tailwind text-lg */
+            font-weight: 600; /* Tailwind semibold */
+            color: #374151; /* Tailwind gray-700 */
+            margin-bottom: 1rem; /* Tailwind mb-4 */
+        }
+        .sim-button {
+            background-color: #10b981; /* Tailwind green-500 */
+            color: white;
+            padding: 0.5rem 1rem; /* Tailwind py-2 px-4 */
+            border-radius: 0.375rem; /* Tailwind rounded-md */
+            cursor: pointer;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            transition: background-color 0.3s ease;
+        }
+        .sim-button:hover {
+            background-color: #059669; /* Tailwind green-600 */
+        }
+        .sim-input {
+            border: 1px solid #d1d5db; /* Tailwind gray-300 */
+            padding: 0.5rem;
+            border-radius: 0.375rem; /* Tailwind rounded-md */
+            margin-bottom: 0.5rem;
+            width: calc(100% - 1rem);
+        }
+        .sim-message {
+            background-color: #eff6ff; /* Tailwind blue-50 */
+            color: #1e40af; /* Tailwind blue-800 */
+            padding: 0.75rem; /* Tailwind p-3 */
+            border-radius: 0.375rem; /* Tailwind rounded-md */
+            margin-top: 1rem; /* Tailwind mt-4 */
+            border-left: 4px solid #2563eb; /* Tailwind blue-600 */
+        }
+        .sim-code-block {
+            background-color: #1f2937; /* Tailwind gray-800 */
+            color: #d1d5db; /* Tailwind gray-300 */
+            padding: 1rem;
+            border-radius: 0.375rem; /* Tailwind rounded-md */
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.875rem; /* Tailwind text-sm */
+        }
+        .d3-flow-diagram {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #e5e7eb; /* Tailwind gray-200 */
+            border-radius: 0.375rem; /* Tailwind rounded-md */
+            margin-top: 1rem;
+        }
+        .d3-flow-diagram .node rect {
+            fill: #bfdbfe; /* Tailwind blue-200 */
+            stroke: #60a5fa; /* Tailwind blue-400 */
+            stroke-width: 1.5px;
+        }
+        .d3-flow-diagram .node text {
+            font-size: 12px;
+            fill: #1e3a8a; /* Tailwind blue-800 */
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        .d3-flow-diagram .link {
+            stroke: #9ca3af; /* Tailwind gray-400 */
+            stroke-width: 2px;
+            marker-end: url(#arrowhead);
+        }
+        .clickable {
+            cursor: pointer;
+            text-decoration: underline;
+            color: #2563eb; /* Tailwind blue-600 */
+        }
+        .highlight {
+            background-color: #fef3c7; /* Tailwind amber-100 */
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div id="presentation-container">
+        <div id="slide-deck">
+            </div>
+        <div class="navigation-controls">
+            <button id="prevBtn" class="nav-button">Previous</button>
+            <div id="progress-indicator" class="progress-indicator"></div>
+            <button id="nextBtn" class="nav-button">Next</button>
+        </div>
+    </div>
+
+    <script>
+        const slidesData = [
+            {
+                title: "Welcome! Slack, Salesforce Flow & Agentforce Integration",
+                content: `
+                    <p class="text-lg mb-4">This interactive guide will walk you through integrating Slack, Salesforce Flow, and Agentforce.</p>
+                    <p class="mb-2"><strong>What you'll learn:</strong></p>
+                    <ul class="list-disc list-inside mb-4">
+                        <li>Installing necessary apps in Slack and Salesforce.</li>
+                        <li>Assigning appropriate permissions.</li>
+                        <li>Creating Salesforce Flows to send Slack messages.</li>
+                        <li>Connecting these Flows to Agentforce for automation.</li>
+                        <li>Practical use cases for this powerful integration.</li>
+                    </ul>
+                    <p>Click "Next" to begin!</p>
+                    <div class="mt-8 text-center">
+                        <svg class="inline-block w-16 h-16 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        <svg class="inline-block w-16 h-16 text-purple-600 mx-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        <svg class="inline-block w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    </div>
+                `
+            },
+            {
+                title: "Step 1: Install Required Apps",
+                content: `
+                    <h3>Part A: In Slack</h3>
+                    <p>First, you need to connect Salesforce to your Slack workspace.</p>
+                    <div class="simulation-box" id="slack-sim">
+                        <h4>Simulation: Slack App Directory</h4>
+                        <p>1. Go to the Slack App Directory.</p>
+                        <p>2. Search for "Salesforce apps for Slack".</p>
+                        <button class="sim-button" onclick="document.getElementById('slack-step1-msg').classList.remove('hidden')">Search "Salesforce"</button>
+                        <div id="slack-step1-msg" class="sim-message hidden mt-2">
+                            Found: <strong>Salesforce App</strong>. <br>
+                            3. Click <code class="clickable" onclick="document.getElementById('slack-step2-msg').classList.remove('hidden')">Add to Slack</code>.
+                        </div>
+                        <div id="slack-step2-msg" class="sim-message hidden mt-2">
+                            Salesforce app added! <br>
+                            4. In Slack, find the Salesforce app and click <code class="clickable" onclick="document.getElementById('slack-step3-msg').classList.remove('hidden')">Connect Salesforce Org</code>.
+                        </div>
+                        <div id="slack-step3-msg" class="sim-message hidden mt-2">
+                            You'll be prompted to log in with your Salesforce credentials to authorize the connection.
+                        </div>
+                    </div>
+
+                    <h3>Part B: In Salesforce</h3>
+                    <p>Next, set up Slack integration from the Salesforce side.</p>
+                    <div class="simulation-box" id="salesforce-sim-setup">
+                        <h4>Simulation: Salesforce Slack Setup Assistant</h4>
+                        <p>1. In Salesforce Setup, search for "Slack Setup Assistant".</p>
+                        <button class="sim-button" onclick="document.getElementById('sf-setup-step1').classList.remove('hidden')">Open Slack Setup Assistant</button>
+                        <div id="sf-setup-step1" class="sim-message hidden mt-2">
+                            <strong>Slack Setup Assistant Opened.</strong> Follow the guided steps:
+                            <ul class="list-disc list-inside ml-4 mt-2">
+                                <li id="sf-guide-1" class="mb-1">Install the Slack package (if not already installed). <button class="sim-button text-xs py-1 px-2" onclick="highlightNextGuide('sf-guide-2')">Mark as Done</button></li>
+                                <li id="sf-guide-2" class="mb-1 hidden">Connect your Slack workspace. <button class="sim-button text-xs py-1 px-2" onclick="highlightNextGuide('sf-guide-3')">Mark as Done</button></li>
+                                <li id="sf-guide-3" class="mb-1 hidden">Authorize your Salesforce org. <button class="sim-button text-xs py-1 px-2" onclick="highlightNextGuide('sf-guide-4')">Mark as Done</button></li>
+                                <li id="sf-guide-4" class="mb-1 hidden">Complete the workspace pairing process. <button class="sim-button text-xs py-1 px-2" onclick="document.getElementById('sf-setup-complete').classList.remove('hidden')">Mark as Done</button></li>
+                            </ul>
+                        </div>
+                        <div id="sf-setup-complete" class="sim-message hidden mt-2">
+                           ✅ Salesforce and Slack are now connected!
+                        </div>
+                    </div>
+                `,
+                init: () => {
+                    window.highlightNextGuide = (nextId) => {
+                        const current = document.querySelector('.sf-guide-highlight');
+                        if (current) current.classList.remove('sf-guide-highlight', 'font-bold');
+                        
+                        const nextElement = document.getElementById(nextId);
+                        if (nextElement) {
+                            nextElement.classList.remove('hidden');
+                            nextElement.classList.add('sf-guide-highlight', 'font-bold');
+                        }
+                    };
+                    // Initial highlight for the first step
+                     setTimeout(() => { // Ensure DOM is ready
+                        const firstGuide = document.getElementById('sf-guide-1');
+                        if (firstGuide) firstGuide.classList.add('sf-guide-highlight', 'font-bold');
+                    }, 0);
+                }
+            },
+            {
+                title: "Step 2: Assign Slack Permissions in Salesforce",
+                content: `
+                    <p>Users who need to interact with Slack via Salesforce require specific permissions.</p>
+                    <div class="simulation-box" id="permission-sim">
+                        <h4>Simulation: Assigning Permissions</h4>
+                        <p>1. Go to Salesforce Setup > Permission Sets.</p>
+                        <button class="sim-button" onclick="document.getElementById('perm-step1').classList.remove('hidden')">Open Permission Sets</button>
+                        <div id="perm-step1" class="sim-message hidden mt-2">
+                            Permission Sets list displayed. <br>
+                            2. Find and open <code>Slack Standard User</code> permission set.
+                            <button class="sim-button mt-1" onclick="document.getElementById('perm-step2').classList.remove('hidden')">Open "Slack Standard User"</button>
+                        </div>
+                        <div id="perm-step2" class="sim-message hidden mt-2">
+                            "Slack Standard User" details opened. <br>
+                            3. Click <code class="clickable" onclick="document.getElementById('perm-step3').classList.remove('hidden')">Manage Assignments</code>.
+                        </div>
+                        <div id="perm-step3" class="sim-message hidden mt-2">
+                            Assignments page loaded. <br>
+                            4. Click <code class="clickable" onclick="document.getElementById('perm-step4').classList.remove('hidden')">Add Assignments</code>.
+                        </div>
+                        <div id="perm-step4" class="sim-message hidden mt-2">
+                            User selection screen appears. <br>
+                            5. Select users who need Slack access and assign them the permission set.
+                            <p class="mt-2">Example: Select 'User A', 'User B'.</p>
+                            <button class="sim-button mt-1" onclick="document.getElementById('perm-step5').classList.remove('hidden')">Assign to Selected Users</button>
+                        </div>
+                         <div id="perm-step5" class="sim-message hidden mt-2">
+                           ✅ Permissions assigned! Selected users can now use Slack integration features.
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Step 3: Create & Configure a Flow for Slack Messages",
+                content: `
+                    <p>Salesforce Flow automates sending messages to Slack based on various triggers or conditions.</p>
+                    <h3>Part A: Create a New Flow</h3>
+                     <div class="simulation-box" id="flow-create-sim">
+                        <h4>Simulation: New Flow Creation</h4>
+                        <p>1. In Salesforce Setup > Flows > Click <code class="clickable" onclick="document.getElementById('flow-type-select').classList.remove('hidden')">New Flow</code>.</p>
+                        <div id="flow-type-select" class="sim-message hidden mt-2">
+                            <strong>Select Flow Type:</strong>
+                            <ul class="list-disc list-inside ml-4 mt-2">
+                                <li><code class="clickable" onclick="showFlowTypeInfo('autolaunched')">Autolaunched Flow</code>: For manual or system-triggered messages.</li>
+                                <li><code class="clickable" onclick="showFlowTypeInfo('record-triggered')">Record-Triggered Flow</code>: For messages based on record changes (e.g., New Lead, Case Update).</li>
+                            </ul>
+                            <div id="flow-type-info" class="mt-2 p-2 bg-gray-100 rounded"></div>
+                            <p class="mt-2">Let's choose <code class="clickable" onclick="document.getElementById('flow-chosen').classList.remove('hidden'); showFlowTypeInfo('record-triggered', true);">Record-Triggered Flow</code> for this example.</p>
+                        </div>
+                        <div id="flow-chosen" class="sim-message hidden mt-2">
+                           ✅ Record-Triggered Flow selected! You are now in the Flow Builder.
+                        </div>
+                    </div>
+                `,
+                init: () => {
+                    window.showFlowTypeInfo = (type, selected = false) => {
+                        const infoEl = document.getElementById('flow-type-info');
+                        if (type === 'autolaunched') {
+                            infoEl.innerHTML = "<strong>Autolaunched Flow:</strong> Good for processes that run in the background, or are called by other processes, Apex, or APIs. Not tied directly to a record event.";
+                        } else if (type === 'record-triggered') {
+                            infoEl.innerHTML = "<strong>Record-Triggered Flow:</strong> Ideal for automating actions when a record is created, updated, or deleted. This is common for Slack notifications.";
+                        }
+                        if (selected) {
+                             infoEl.innerHTML += "<br/><em>You've selected this for the example.</em>";
+                        }
+                    }
+                }
+            },
+            {
+                title: "Step 3: Flow Builder - Elements & Slack Action",
+                content: `
+                    <h3>Part B: Add Flow Elements</h3>
+                    <p>Inside the Flow Builder, you'll add elements to define the logic:</p>
+                    <ul class="list-disc list-inside mb-4">
+                        <li><strong>Get Records:</strong> Fetch data to include in the Slack message (e.g., Lead Name, Opportunity Amount).</li>
+                        <li><strong>Decision (Optional):</strong> Apply logic to control if/when the message is sent (e.g., only for high-value opportunities).</li>
+                        <li><strong>Action:</strong> Select <code>Slack: Post Message</code>.</li>
+                    </ul>
+                    <div class="simulation-box">
+                        <h4>Visualization: Sample Flow Logic</h4>
+                        <div id="d3-flow-diagram" class="d3-flow-diagram"></div>
+                        <p class="text-sm text-gray-600 mt-2 text-center">This diagram illustrates a typical flow for sending a Slack message.</p>
+                    </div>
+
+                    <h3>Part C: Configure Slack Action</h3>
+                    <div class="simulation-box" id="slack-action-sim">
+                        <h4>Simulation: Configuring "Slack: Post Message" Action</h4>
+                        <p>When you add the "Slack: Post Message" action, you'll need to configure it:</p>
+                        <p>1. <strong>Message Destination:</strong> Choose where to send the message (e.g., a specific Slack channel, or to a user identified by a record field).</p>
+                        <label for="sim-destination" class="block mt-2 font-medium">Message Destination (e.g., #sales-alerts or User ID variable):</label>
+                        <input type="text" id="sim-destination" class="sim-input" placeholder="Enter Slack Channel ID or User ID variable">
+
+                        <p class="mt-2">2. <strong>Message Body:</strong> Customize the message content. You can use plain text and merge fields (variables from your flow).</p>
+                        <label for="sim-message-body" class="block mt-2 font-medium">Message Body:</label>
+                        <textarea id="sim-message-body" rows="3" class="sim-input" placeholder="E.g., New Lead Assigned: {!Lead.Name} from {!Lead.Company}."></textarea>
+                        <button class="sim-button mt-2" onclick="showSlackActionPreview()">Preview Message</button>
+                        <div id="slack-action-preview" class="sim-message hidden mt-2"></div>
+                        <p class="mt-4">3. Save and Activate the flow.</p>
+                         <button class="sim-button" onclick="document.getElementById('flow-activated-msg').classList.remove('hidden')">Save & Activate Flow</button>
+                         <div id="flow-activated-msg" class="sim-message hidden mt-2">
+                           ✅ Flow saved and activated! It's ready to send Slack messages.
+                        </div>
+                    </div>
+                `,
+                init: () => {
+                    // D3.js Flow Diagram
+                    const nodes = [
+                        { id: 1, name: "Record Trigger\n(e.g., New Lead)", x: 150, y: 50, width: 120, height: 50 },
+                        { id: 2, name: "Get Records\n(Lead Details)", x: 150, y: 150, width: 120, height: 50 },
+                        { id: 3, name: "Decision\n(e.g., Is Hot Lead?)", x: 350, y: 150, width: 120, height: 50 },
+                        { id: 4, name: "Action: Slack\nPost Message", x: 150, y: 250, width: 120, height: 50 },
+                        { id: 5, name: "Action: Slack\nPost to Manager", x: 350, y: 250, width: 120, height: 50 }
+                    ];
+                    const links = [
+                        { source: 1, target: 2 },
+                        { source: 2, target: 3 },
+                        { source: 3, target: 4, label: "No" }, // Path if not hot lead
+                        { source: 3, target: 5, label: "Yes" }  // Path if hot lead
+                    ];
+
+                    const svg = d3.select("#d3-flow-diagram")
+                        .append("svg")
+                        .attr("width", "100%")
+                        .attr("height", "100%")
+                        .attr("viewBox", `0 0 500 300`); // Adjusted viewBox
+
+                    svg.append("defs").append("marker")
+                        .attr("id", "arrowhead")
+                        .attr("viewBox", "-0 -5 10 10")
+                        .attr("refX", 19) // Adjusted for node size
+                        .attr("refY", 0)
+                        .attr("orient", "auto")
+                        .attr("markerWidth", 6)
+                        .attr("markerHeight", 6)
+                        .attr("xoverflow","visible")
+                        .append("svg:path")
+                        .attr("d", "M 0,-5 L 10 ,0 L 0,5")
+                        .attr("fill", "#9ca3af")
+                        .style("stroke","none");
+
+                    const link = svg.selectAll(".link")
+                        .data(links)
+                        .enter().append("line")
+                        .attr("class", "link")
+                        .attr("x1", d => nodes.find(n => n.id === d.source).x)
+                        .attr("y1", d => nodes.find(n => n.id === d.source).y + nodes.find(n => n.id === d.source).height / 2)
+                        .attr("x2", d => nodes.find(n => n.id === d.target).x)
+                        .attr("y2", d => nodes.find(n => n.id === d.target).y - nodes.find(n => n.id === d.target).height / 2)
+                        .attr("marker-end", "url(#arrowhead)");
+                    
+                    link.filter(d => d.label) // Add labels to links
+                        .each(function(d) {
+                            const sourceNode = nodes.find(n => n.id === d.source);
+                            const targetNode = nodes.find(n => n.id === d.target);
+                            const midX = (sourceNode.x + targetNode.x) / 2;
+                            const midY = (sourceNode.y + sourceNode.height / 2 + targetNode.y - targetNode.height/2) / 2;
+                            svg.append("text")
+                                .attr("x", midX + (d.label === "Yes" ? 15 : -15)) // Offset label slightly
+                                .attr("y", midY)
+                                .attr("text-anchor", "middle")
+                                .attr("dominant-baseline", "central")
+                                .style("font-size", "10px")
+                                .style("fill", "#4b5563") // Tailwind gray-600
+                                .text(d.label);
+                        });
+
+
+                    const node = svg.selectAll(".node")
+                        .data(nodes)
+                        .enter().append("g")
+                        .attr("class", "node")
+                        .attr("transform", d => `translate(${d.x - d.width/2}, ${d.y - d.height/2})`);
+
+                    node.append("rect")
+                        .attr("width", d => d.width)
+                        .attr("height", d => d.height)
+                        .attr("rx", 5)
+                        .attr("ry", 5);
+
+                    node.append("text")
+                        .attr("x", d => d.width / 2)
+                        .attr("y", d => d.height / 2)
+                        .selectAll("tspan")
+                        .data(d => d.name.split("\n"))
+                        .enter().append("tspan")
+                            .attr("x", d => nodes.find(n => n.name.includes(d)).width / 2)
+                            .attr("dy", (d,i) => i === 0 ? 0 : "1.2em")
+                            .text(d => d);
+                    
+                    window.showSlackActionPreview = () => {
+                        const destination = document.getElementById('sim-destination').value || "[Undefined Destination]";
+                        const body = document.getElementById('sim-message-body').value || "[Empty Message Body]";
+                        const previewEl = document.getElementById('slack-action-preview');
+                        previewEl.innerHTML = `<strong>Preview:</strong><br>To: ${destination}<br>Message: ${body.replace(/{!Lead.Name}/g, "<strong>John Doe</strong>").replace(/{!Lead.Company}/g, "<strong>Acme Corp</strong>")}`;
+                        previewEl.classList.remove('hidden');
+                    };
+                }
+            },
+            {
+                title: "Step 4: Connect the Flow to Agentforce",
+                content: `
+                    <p>Agentforce allows you to trigger these Salesforce Flows through conversational AI agents.</p>
+                    <h3>A. Create a Custom Agent Action</h3>
+                    <div class="simulation-box" id="agent-action-sim">
+                        <h4>Simulation: New Agent Action</h4>
+                        <p>1. Go to Salesforce Setup > Agentforce Assets.</p>
+                        <p>2. Under Actions, click <code class="clickable" onclick="document.getElementById('agent-action-form').classList.remove('hidden')">New Agent Action</code>.</p>
+                        <div id="agent-action-form" class="sim-message hidden mt-2">
+                            <strong>Configure Agent Action:</strong>
+                            <div class="mt-2">
+                                <label class="block font-medium">Reference Action Type:</label>
+                                <select class="sim-input"><option>Flow</option></select>
+                            </div>
+                            <div class="mt-2">
+                                <label class="block font-medium">Select the Flow you created:</label>
+                                <select class="sim-input"><option>My Slack Notification Flow</option></select>
+                            </div>
+                            <p class="mt-2 text-sm">Define input/output variables if your flow requires them (e.g., Record ID to process).</p>
+                            <button class="sim-button mt-2" onclick="document.getElementById('agent-action-saved').classList.remove('hidden')">Save Agent Action</button>
+                        </div>
+                        <div id="agent-action-saved" class="sim-message hidden mt-2">
+                           ✅ Custom Agent Action created and linked to your Salesforce Flow!
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Step 4: Connect Flow to Agentforce (Continued)",
+                content: `
+                    <h3>B. Assign Action to an Agent</h3>
+                    <div class="simulation-box" id="assign-agent-sim">
+                        <h4>Simulation: Agent Builder</h4>
+                        <p>1. Go to Salesforce Setup > Agentforce Agents.</p>
+                        <p>2. Choose the relevant Agent and click <code class="clickable" onclick="document.getElementById('agent-builder-view').classList.remove('hidden')">Open in Builder</code>.</p>
+                        <div id="agent-builder-view" class="sim-message hidden mt-2">
+                            <strong>Agent Builder Interface:</strong>
+                            <p class="my-2">In the topic configuration for this agent (e.g., "Handle New Lead Inquiry"):</p>
+                            <ul class="list-disc list-inside ml-4">
+                                <li>Add your new Agent Action (e.g., "Send Slack Update for Lead") from the Asset Library.</li>
+                                <li>Link this action to the proper Topic Trigger (e.g., when the agent successfully captures lead details).</li>
+                            </ul>
+                            <p class="mt-2 italic text-sm">Imagine dragging your "Send Slack Update for Lead" action onto a "Lead Captured" trigger point in a visual builder.</p>
+                            <button class="sim-button mt-2" onclick="document.getElementById('agent-action-linked').classList.remove('hidden')">Link Action to Trigger</button>
+                        </div>
+                        <div id="agent-action-linked" class="sim-message hidden mt-2">
+                           ✅ Agent Action linked within the Agent's topic!
+                        </div>
+                    </div>
+
+                    <h3>C. Activate the Agent</h3>
+                     <div class="simulation-box" id="activate-agent-sim">
+                        <h4>Simulation: Agent Activation</h4>
+                        <p>Once configured, the final step is to activate the agent.</p>
+                        <button class="sim-button" onclick="document.getElementById('agent-activated').classList.remove('hidden')">Activate Agent</button>
+                        <div id="agent-activated" class="sim-message hidden mt-2">
+                           🚀 Agent Activated! It can now trigger your Salesforce Flow to send Slack messages based on conversations.
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Use Cases for Integration",
+                content: `
+                    <p>This integration opens up many possibilities for streamlined communication and automation. Here are a few examples:</p>
+                    <ul class="list-disc list-inside space-y-2 mb-4">
+                        <li><strong>New Lead Notifications:</strong> Instantly notify a sales channel or specific rep in Slack when a new lead is created in Salesforce (perhaps captured by Agentforce).</li>
+                        <li><strong>Opportunity Stage Changes:</strong> Alert stakeholders when an opportunity moves to a key stage (e.g., "Closed Won", "Negotiation").</li>
+                        <li><strong>Case Escalations:</strong> Notify support managers or Tier 2 channels in Slack when a case is escalated or remains unresolved for too long.</li>
+                        <li><strong>Approval Requests:</strong> Send Slack messages for approval processes (e.g., discount approvals), allowing approvers to quickly review and act.</li>
+                        <li><strong>Task Reminders:</strong> Alert users in Slack about overdue tasks or upcoming deadlines from Salesforce.</li>
+                        <li><strong>System Alerts:</strong> Notify admins or relevant teams about critical system events or errors logged in Salesforce.</li>
+                        <li><strong>Agentforce Handoffs:</strong> When Agentforce needs to hand off a conversation to a human agent, a Slack message can alert the team with context.</li>
+                    </ul>
+                    <div class="simulation-box">
+                        <h4>Interactive Use Case Example: New Lead Notification</h4>
+                        <p>Imagine Agentforce captures a new lead. This triggers a Salesforce Flow.</p>
+                        <label for="leadName" class="block mt-2 font-medium">Lead Name:</label>
+                        <input type="text" id="leadName" class="sim-input" value="John Prospect">
+                        <label for="leadCompany" class="block mt-1 font-medium">Lead Company:</label>
+                        <input type="text" id="leadCompany" class="sim-input" value="Future Gadgets Inc.">
+                        <label for="salesChannel" class="block mt-1 font-medium">Target Slack Channel:</label>
+                        <input type="text" id="salesChannel" class="sim-input" value="#new-leads">
+                        <button class="sim-button mt-2" onclick="simulateLeadNotification()">Simulate Notification</button>
+                        <div id="lead-notification-sim" class="sim-message hidden mt-2">
+                            </div>
+                    </div>
+                `,
+                init: () => {
+                    window.simulateLeadNotification = () => {
+                        const leadName = document.getElementById('leadName').value || "A New Lead";
+                        const leadCompany = document.getElementById('leadCompany').value || "Some Company";
+                        const channel = document.getElementById('salesChannel').value || "#general";
+                        const simResult = document.getElementById('lead-notification-sim');
+                        
+                        simResult.innerHTML = `
+                            <strong>Mock Slack Message Sent to ${channel}:</strong><br>
+                            <div class="p-2 mt-1 border border-gray-300 rounded bg-white">
+                                <p>🚀 <strong>New Lead Assigned!</strong></p>
+                                <p><strong>Name:</strong> ${leadName}</p>
+                                <p><strong>Company:</strong> ${leadCompany}</p>
+                                <p><small>Source: Agentforce via Salesforce Flow</small></p>
+                            </div>
+                        `;
+                        simResult.classList.remove('hidden');
+                    }
+                }
+            },
+            {
+                title: "Conclusion & Next Steps",
+                content: `
+                    <p class="text-lg mb-4">Congratulations! You've learned the key steps to integrate Slack, Salesforce Flow, and Agentforce.</p>
+                    <p><strong>Key Takeaways:</strong></p>
+                    <ul class="list-disc list-inside mb-4">
+                        <li>Proper app installation and authorization are crucial first steps.</li>
+                        <li>Permissions ensure the right users have access.</li>
+                        <li>Salesforce Flow is a powerful tool for defining the logic of your Slack notifications.</li>
+                        <li>Agentforce connects this automation to your conversational AI, enabling real-time updates.</li>
+                        <li>This integration can significantly improve team communication, response times, and overall efficiency.</li>
+                    </ul>
+                    <p><strong>Next Steps to Consider:</strong></p>
+                    <ul class="list-disc list-inside mb-4">
+                        <li>Explore more complex Flow logic with decisions and loops.</li>
+                        <li>Utilize interactive Slack messages with buttons for quick actions from Slack.</li>
+                        <li>Develop more sophisticated Agentforce topics that leverage these flows.</li>
+                        <li>Monitor your active flows and Slack notifications for performance and make adjustments as needed.</li>
+                    </ul>
+                    <p>Thank you for using this guide!</p>
+                     <div class="mt-8 text-center">
+                        <svg class="inline-block w-20 h-20 text-green-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                    </div>
+                `
+            }
+        ];
+
+        let currentSlide = 0;
+        const slideDeckContainer = document.getElementById('slide-deck');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const progressIndicator = document.getElementById('progress-indicator');
+
+        function renderSlide(slideIndex) {
+            const slideData = slidesData[slideIndex];
+            slideDeckContainer.innerHTML = `
+                <div class="slide active">
+                    <h2 class="slide-title">${slideData.title}</h2>
+                    <div class="slide-content">
+                        ${slideData.content}
+                    </div>
+                </div>
+            `;
+            if (slideData.init && typeof slideData.init === 'function') {
+                // Delay init slightly to ensure DOM elements are fully rendered
+                setTimeout(slideData.init, 50);
+            }
+            updateNavigation();
+        }
+
+        function updateNavigation() {
+            prevBtn.disabled = currentSlide === 0;
+            nextBtn.disabled = currentSlide === slidesData.length - 1;
+            progressIndicator.textContent = `Slide ${currentSlide + 1} of ${slidesData.length}`;
+        }
+
+        prevBtn.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                currentSlide--;
+                renderSlide(currentSlide);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentSlide < slidesData.length - 1) {
+                currentSlide++;
+                renderSlide(currentSlide);
+            }
+        });
+
+        // Initial render
+        renderSlide(currentSlide);
+    </script>
+</body>
+</html>
